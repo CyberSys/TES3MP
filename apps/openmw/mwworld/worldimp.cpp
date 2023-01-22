@@ -803,6 +803,22 @@ namespace MWWorld
         // The player is not registered in any CellStore so must be checked manually
         if (actorId == getPlayerPtr().getClass().getCreatureStats(getPlayerPtr()).getActorId())
             return getPlayerPtr();
+        /*
+            Start of tes3mp addition
+
+            Make it possible to find dedicated players here as well
+        */
+        else
+        {
+            mwmp::DedicatedPlayer* dedicatedPlayer = mwmp::PlayerList::getPlayer(actorId);
+            if (dedicatedPlayer != nullptr)
+            {
+                return dedicatedPlayer->getPtr();
+            }
+        }
+        /*
+            End of tes3mp addition
+        */
         // Now search cells
         return mWorldScene->searchPtrViaActorId (actorId);
     }
@@ -1411,7 +1427,7 @@ namespace MWWorld
             if (movePhysics)
             {
                 if (const auto object = mPhysics->getObject(ptr))
-                    updateNavigatorObject(object);
+                    updateNavigatorObject(*object);
             }
         }
 
@@ -1470,7 +1486,7 @@ namespace MWWorld
         if (mPhysics->getActor(ptr))
             mNavigator->addAgent(getPathfindingHalfExtents(ptr));
         else if (const auto object = mPhysics->getObject(ptr))
-            mShouldUpdateNavigator = updateNavigatorObject(object) || mShouldUpdateNavigator;
+            updateNavigatorObject(*object);
     }
 
     void World::rotateObjectImp(const Ptr& ptr, const osg::Vec3f& rot, MWBase::RotationFlags flags)
@@ -1519,7 +1535,7 @@ namespace MWWorld
             mWorldScene->updateObjectRotation(ptr, order);
 
             if (const auto object = mPhysics->getObject(ptr))
-                updateNavigatorObject(object);
+                updateNavigatorObject(*object);
         }
     }
 
@@ -1611,7 +1627,7 @@ namespace MWWorld
             mPhysics->updateRotation(ptr);
 
             if (const auto object = mPhysics->getObject(ptr))
-                updateNavigatorObject(object);
+                updateNavigatorObject(*object);
         }
     }
 
@@ -1699,8 +1715,31 @@ namespace MWWorld
     void World::setInertialForce(const Ptr& ptr, const osg::Vec3f &force)
     {
         MWPhysics::Actor *actor = mPhysics->getActor(ptr);
-        actor->setOnGround(false);
-        actor->setInertialForce(force);
+
+        if (actor != nullptr)
+        {
+            actor->setOnGround(false);
+            actor->setInertialForce(force);
+        }
+    }
+    /*
+        End of tes3mp addition
+    */
+
+    /*
+        Start of tes3mp addition
+
+        Make it possible to set whether a Ptr is on the ground or not, needed for proper
+        synchronization in multiplayer
+    */
+    void World::setOnGround(const Ptr& ptr, bool onGround)
+    {
+        MWPhysics::Actor* actor = mPhysics->getActor(ptr);
+
+        if (actor != nullptr)
+        {
+            actor->setOnGround(onGround);
+        }
     }
     /*
         End of tes3mp addition
@@ -1759,14 +1798,11 @@ namespace MWWorld
 
     void World::updateNavigator()
     {
-        mPhysics->forEachAnimatedObject([&] (const MWPhysics::Object* object)
-        {
-            mShouldUpdateNavigator = updateNavigatorObject(object) || mShouldUpdateNavigator;
-        });
+        mPhysics->forEachAnimatedObject([&] (const MWPhysics::Object* object) { updateNavigatorObject(*object); });
 
         for (const auto& door : mDoorStates)
             if (const auto object = mPhysics->getObject(door.first))
-                mShouldUpdateNavigator = updateNavigatorObject(object) || mShouldUpdateNavigator;
+                updateNavigatorObject(*object);
 
         if (mShouldUpdateNavigator)
         {
@@ -1775,13 +1811,11 @@ namespace MWWorld
         }
     }
 
-    bool World::updateNavigatorObject(const MWPhysics::Object* object)
+    void World::updateNavigatorObject(const MWPhysics::Object& object)
     {
-        const DetourNavigator::ObjectShapes shapes {
-            *object->getShapeInstance()->getCollisionShape(),
-            object->getShapeInstance()->getAvoidCollisionShape()
-        };
-        return mNavigator->updateObject(DetourNavigator::ObjectId(object), shapes, object->getTransform());
+        const DetourNavigator::ObjectShapes shapes(object.getShapeInstance());
+        mShouldUpdateNavigator = mNavigator->updateObject(DetourNavigator::ObjectId(&object), shapes, object.getTransform())
+            || mShouldUpdateNavigator;
     }
 
     const MWPhysics::RayCastingInterface* World::getRayCasting() const
@@ -3646,6 +3680,7 @@ namespace MWWorld
         bool underwater = MWBase::Environment::get().getWorld()->isUnderwater(MWMechanics::getPlayer().getCell(), worldPos);
         if (underwater)
         {
+            MWMechanics::projectileHit(actor, Ptr(), bow, projectile, worldPos, attackStrength);
             mRendering->emitWaterRipple(worldPos);
             return;
         }
@@ -3881,6 +3916,12 @@ namespace MWWorld
         MWWorld::Ptr player = getPlayerPtr();
         player.getClass().getInventoryStore(player).rechargeItems(duration);
 
+        /*
+            Start of tes3mp change (major)
+
+            Don't unilaterally recharge world items on clients
+        */
+        /*
         if (activeOnly)
         {
             for (auto &cell : mWorldScene->getActiveCells())
@@ -3890,6 +3931,10 @@ namespace MWWorld
         }
         else
             mCells.recharge(duration);
+        */
+        /*
+            End of tes3mp change (major)
+        */
     }
 
     void World::teleportToClosestMarker (const MWWorld::Ptr& ptr,

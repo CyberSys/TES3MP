@@ -45,36 +45,53 @@ Super special thanks
     Bret Curtis (psi29a)
     Gabriel Pascu (iGrebla)
     greetasdf
+    Jason Ginther
     Learwolf
+    Mads Buvik Sandvei (madsbuvi)
     Marc Zinnschlag (Zini)
     Mitch (Zaberius)
     scrawl
+    Testman
 
 
 Special thanks
 --------------
 
     Aesylwinn
+    Battlerax - Various small fixes
+    Boyos
+    Brandon Guffey
+    Caledonii
     Camul
     David Wery
+    Delphik
     DestinedToDie
     Donovan Ando
+    DrunkenMonk
     Gluka
     Goodevil
     Ignatious
     James Wards of Gore Corps LAN Club (gorecorps.co.nz)
-    Jeremiah
+    Jeff Russell
+    Jeremy M.
     Kyle Willey of Loreshaper Games (steempeak.com/@loreshapergames)
     Lewis Sadlier
     Luc Keating
+    Mark Epstein aka StirlizZ
     Michael Zagar (Zoops)
+    Nkfree
     Olaxan
     ppsychrite
     Rhiyo
+    Ryan Gage
     Scorcio
     Simon Nemes
+    Snorkel the Dolphin
+    Swims-in-Shadows aka StrayHALO_MAN
     Texafornian
     Thrud
+    Wraith
+    Zach Wild
     Zaphida
-    All the developers of OpenMW for creating an amazing open source project
+    OpenMW for creating an amazing open source project
 

@@ -148,11 +148,9 @@ namespace
         {
             if (ptr.getClass().isDoor() && !ptr.getCellRef().getTeleport())
             {
-                const auto shape = object->getShapeInstance()->getCollisionShape();
-
                 btVector3 aabbMin;
                 btVector3 aabbMax;
-                shape->getAabb(btTransform::getIdentity(), aabbMin, aabbMax);
+                object->getShapeInstance()->getCollisionShape()->getAabb(btTransform::getIdentity(), aabbMin, aabbMax);
 
                 const auto center = (aabbMax + aabbMin) * 0.5f;
 
@@ -179,12 +177,7 @@ namespace
 
                 navigator.addObject(
                     DetourNavigator::ObjectId(object),
-                    DetourNavigator::DoorShapes(
-                        *shape,
-                        object->getShapeInstance()->getAvoidCollisionShape(),
-                        connectionStart,
-                        connectionEnd
-                    ),
+                    DetourNavigator::DoorShapes(object->getShapeInstance(), connectionStart, connectionEnd),
                     transform
                 );
             }
@@ -192,10 +185,7 @@ namespace
             {
                 navigator.addObject(
                     DetourNavigator::ObjectId(object),
-                    DetourNavigator::ObjectShapes {
-                        *object->getShapeInstance()->getCollisionShape(),
-                        object->getShapeInstance()->getAvoidCollisionShape()
-                    },
+                    DetourNavigator::ObjectShapes(object->getShapeInstance()),
                     object->getTransform()
                 );
             }
@@ -432,7 +422,7 @@ namespace MWWorld
                 }
 
                 if (const auto heightField = mPhysics->getHeightField(cellX, cellY))
-                    navigator->addObject(DetourNavigator::ObjectId(heightField), *heightField->getShape(),
+                    navigator->addObject(DetourNavigator::ObjectId(heightField), heightField, *heightField->getShape(),
                             heightField->getCollisionObject()->getWorldTransform());
             }
 
@@ -477,12 +467,6 @@ namespace MWWorld
                     mPhysics->disableWater();
 
                 const auto player = MWBase::Environment::get().getWorld()->getPlayerPtr();
-
-                // By default the player is grounded, with the scene fully loaded, we validate and correct this.
-                if (player.mCell == cell) // Only run once, during initial cell load.
-                {
-                    mPhysics->traceDown(player, player.getRefData().getPosition().asVec3(), 10.f);
-                }
 
                 navigator->update(player.getRefData().getPosition().asVec3());
 

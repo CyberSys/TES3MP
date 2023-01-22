@@ -125,7 +125,7 @@ namespace MWPhysics
             void addObject (const MWWorld::Ptr& ptr, const std::string& mesh, int collisionType = CollisionType_World);
             void addActor (const MWWorld::Ptr& ptr, const std::string& mesh);
 
-            int addProjectile(const MWWorld::Ptr& caster, const osg::Vec3f& position, const std::string& mesh, bool computeRadius, bool canTraverseWater);
+            int addProjectile(const MWWorld::Ptr& caster, const osg::Vec3f& position, const std::string& mesh, bool computeRadius);
             void setCaster(int projectileId, const MWWorld::Ptr& caster);
             void updateProjectile(const int projectileId, const osg::Vec3f &position) const;
             void removeProjectile(const int projectileId);
@@ -286,7 +286,7 @@ namespace MWPhysics
             using ProjectileMap = std::map<int, std::shared_ptr<Projectile>>;
             ProjectileMap mProjectiles;
 
-            using HeightFieldMap = std::map<std::pair<int, int>, std::unique_ptr<HeightField>>;
+            using HeightFieldMap = std::map<std::pair<int, int>, osg::ref_ptr<HeightField>>;
             HeightFieldMap mHeightFields;
 
             bool mDebugDrawEnabled;

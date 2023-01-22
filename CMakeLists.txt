@@ -329,6 +329,11 @@ if (WIN32)
     add_definitions(-DNOMINMAX -DWIN32_LEAN_AND_MEAN)
 endif()
 
+# Start of tes3mp addition
+#
+# Don't require certain dependencies for the server
+IF(BUILD_OPENMW OR BUILD_OPENCS)
+# End of tes3mp addition
 if(OPENMW_USE_SYSTEM_BULLET)
     set(REQUIRED_BULLET_VERSION 286) # Bullet 286 required due to runtime bugfixes for btCapsuleShape
     if (DEFINED ENV{TRAVIS_BRANCH} OR DEFINED ENV{APPVEYOR})
@@ -361,6 +366,11 @@ if(OPENMW_USE_SYSTEM_BULLET)
         message(FATAL_ERROR "Bullet does not uses double precision")
     endif()
 endif()
+# Start of tes3mp addition
+#
+# Don't require certain dependencies for the server
+ENDIF(BUILD_OPENMW OR BUILD_OPENCS)
+# End of tes3mp addition
 
 if (NOT WIN32 AND BUILD_WIZARD) # windows users can just run the morrowind installer
     find_package(LIBUNSHIELD REQUIRED) # required only for non win32 when building openmw-wizard
@@ -380,6 +390,12 @@ if(NOT HAVE_STDINT_H)
     message(FATAL_ERROR "stdint.h was not found" )
 endif()
 
+# Start of tes3mp addition
+#
+# Don't require certain dependencies for the server
+# but keep OSG's headers (HACK)
+IF(BUILD_OPENMW OR BUILD_OPENCS)
+# End of tes3mp addition
 if(OPENMW_USE_SYSTEM_OSG)
     find_package(OpenSceneGraph 3.4.0 REQUIRED ${USED_OSG_COMPONENTS})
     if (${OPENSCENEGRAPH_VERSION} VERSION_GREATER 3.6.2 AND ${OPENSCENEGRAPH_VERSION} VERSION_LESS 3.6.5)
@@ -396,12 +412,15 @@ include_directories(BEFORE SYSTEM ${OPENSCENEGRAPH_INCLUDE_DIRS})
 if(OSG_STATIC)
     add_definitions(-DOSG_LIBRARY_STATIC)
 endif()
-
 # Start of tes3mp addition
 #
 # Don't require certain dependencies for the server
-IF(BUILD_OPENMW OR BUILD_OPENCS)
+# but keep OSG's headers (HACK)
+ELSE(BUILD_OPENMW OR BUILD_OPENCS)
+    include_directories(${OPENSCENEGRAPH_INCLUDE_DIRS})
+ENDIF(BUILD_OPENMW OR BUILD_OPENCS)
 # End of tes3mp addition
+
 set(BOOST_COMPONENTS system filesystem program_options iostreams)
 if(WIN32)
     set(BOOST_COMPONENTS ${BOOST_COMPONENTS} locale)
@@ -419,10 +438,25 @@ endif()
 set(Boost_NO_BOOST_CMAKE ON)
 
 find_package(Boost 1.6.2 REQUIRED COMPONENTS ${BOOST_COMPONENTS} OPTIONAL_COMPONENTS ${BOOST_OPTIONAL_COMPONENTS})
+# Start of tes3mp addition
+#
+# Don't require certain dependencies for the server
+IF(BUILD_OPENMW OR BUILD_OPENCS)
+# End of tes3mp addition
 if(OPENMW_USE_SYSTEM_MYGUI)
     find_package(MyGUI 3.2.2 REQUIRED)
 endif()
+# End of tes3mp addition
+#
+# Don't require certain dependencies for the server
+ENDIF(BUILD_OPENMW OR BUILD_OPENCS)
+# End of tes3mp addition
 find_package(SDL2 2.0.9 REQUIRED)
+# Start of tes3mp addition
+#
+# Don't require certain dependencies for the server
+IF(BUILD_OPENMW OR BUILD_OPENCS)
+# End of tes3mp addition
 find_package(OpenAL REQUIRED)
 # End of tes3mp addition
 #
@@ -500,8 +534,8 @@ else ()
         "${OpenMW_BINARY_DIR}/openmw.cfg")
 endif ()
 
-configure_resource_file(${OpenMW_SOURCE_DIR}/files/openmw-cs.cfg
-    "${OpenMW_BINARY_DIR}" "openmw-cs.cfg")
+pack_resource_file(${OpenMW_SOURCE_DIR}/files/openmw-cs.cfg
+    "${OpenMW_BINARY_DIR}" "defaults-cs.bin")
 
 # Needs the copy version because the configure version assumes the end of the file has been reached when a null character is reached and there are no CMake expressions to evaluate.
 copy_resource_file(${OpenMW_SOURCE_DIR}/files/opencs/defaultfilters
@@ -568,7 +602,17 @@ IF(BUILD_OPENMW OR BUILD_OPENCS)
 # End of tes3mp addition
 add_subdirectory (extern/osg-ffmpeg-videoplayer)
 add_subdirectory (extern/oics)
+# Start of tes3mp addition
+#
+# Don't require certain dependencies for the server
+ENDIF(BUILD_OPENMW OR BUILD_OPENCS)
+# End of tes3mp addition
 add_subdirectory (extern/Base64)
+# Start of tes3mp addition
+#
+# Don't require certain dependencies for the server
+IF(BUILD_OPENMW OR BUILD_OPENCS)
+# End of tes3mp addition
 if (BUILD_OPENCS)
     add_subdirectory (extern/osgQt)
 endif()
@@ -1039,7 +1083,7 @@ elseif(NOT APPLE)
         # End of tes3mp addition
 
         IF(BUILD_OPENCS)
-            INSTALL(FILES "${INSTALL_SOURCE}/openmw-cs.cfg" DESTINATION "${SYSCONFDIR}" COMPONENT "opencs")
+            INSTALL(FILES "${INSTALL_SOURCE}/defaults-cs.bin" DESTINATION "${SYSCONFDIR}" COMPONENT "opencs")
         ENDIF(BUILD_OPENCS)
 
         # Install resources

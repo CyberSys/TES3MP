@@ -24,7 +24,8 @@ namespace mwmp
     public:
         enum GM
         {
-            GM_TES3MP_InputBox = MWGui::GM_QuickKeysMenu + 1,
+            GM_VR_MetaMenu = MWGui::GM_QuickKeysMenu + 1, // Put this dummy GuiMode here because it's used in VR
+            GM_TES3MP_InputBox,
             GM_TES3MP_ListBox
 
         };
@@ -45,10 +46,12 @@ namespace mwmp
 
         void showDialogList(const BasePlayer::GUIMessageBox &guiMessageBox);
 
-        bool getChatEditState();
-
         /// Returns 0 if there was no events
         bool pressedKey(int key);
+
+        void changeChatMode();
+
+        bool getChatEditState();
 
         void update(float dt);
 

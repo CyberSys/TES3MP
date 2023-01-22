@@ -35,6 +35,7 @@ RepairRecord tempRepair;
 ScriptRecord tempScript;
 StaticRecord tempStatic;
 SoundRecord tempSound;
+GameSettingRecord tempGameSetting;
 
 BaseOverrides tempOverrides;
 
@@ -85,6 +86,7 @@ void RecordsDynamicFunctions::ClearRecords() noexcept
     WorldstateFunctions::writeWorldstate.scriptRecords.clear();
     WorldstateFunctions::writeWorldstate.staticRecords.clear();
     WorldstateFunctions::writeWorldstate.soundRecords.clear();
+    WorldstateFunctions::writeWorldstate.gameSettingRecords.clear();
 }
 
 unsigned short RecordsDynamicFunctions::GetRecordType() noexcept
@@ -403,6 +405,8 @@ void RecordsDynamicFunctions::SetRecordId(const char* id) noexcept
         tempStatic.data.mId = id;
     else if (writeRecordsType == mwmp::RECORD_TYPE::SOUND)
         tempSound.data.mId = id;
+    else if (writeRecordsType == mwmp::RECORD_TYPE::GAMESETTING)
+        tempGameSetting.data.mId = id;
     else
         LOG_MESSAGE_SIMPLE(TimedLog::LOG_ERROR, "Tried to set id for record type %i which lacks that property", writeRecordsType);
 }
@@ -459,6 +463,8 @@ void RecordsDynamicFunctions::SetRecordBaseId(const char* baseId) noexcept
         tempStatic.baseId = baseId;
     else if (writeRecordsType == mwmp::RECORD_TYPE::SOUND)
         tempSound.baseId = baseId;
+    else if (writeRecordsType == mwmp::RECORD_TYPE::GAMESETTING)
+        tempGameSetting.baseId = baseId;
     else
         LOG_MESSAGE_SIMPLE(TimedLog::LOG_ERROR, "Tried to set baseId for record type %i which lacks that property", writeRecordsType);
 }
@@ -1542,11 +1548,59 @@ void RecordsDynamicFunctions::SetRecordScriptText(const char* scriptText) noexce
         tempScript.data.mScriptText = scriptText;
     else
     {
-        LOG_MESSAGE_SIMPLE(TimedLog::LOG_ERROR, "Tried to set close sound for record type %i which lacks that property", writeRecordsType);
+        LOG_MESSAGE_SIMPLE(TimedLog::LOG_ERROR, "Tried to set script text for record type %i which lacks that property", writeRecordsType);
         return;
     }
 
     tempOverrides.hasScriptText = true;
+}
+
+void RecordsDynamicFunctions::SetRecordIntegerVariable(int intVar) noexcept
+{
+    unsigned short writeRecordsType = WorldstateFunctions::writeWorldstate.recordsType;
+
+    if (writeRecordsType == mwmp::RECORD_TYPE::GAMESETTING)
+    {
+        tempGameSetting.variable.variableType = mwmp::INT;
+        tempGameSetting.variable.intValue = intVar;
+    }
+    else
+    {
+        LOG_MESSAGE_SIMPLE(TimedLog::LOG_ERROR, "Tried to set integer variable for record type %i which lacks that property", writeRecordsType);
+        return;
+    }
+}
+
+void RecordsDynamicFunctions::SetRecordFloatVariable(double floatVar) noexcept
+{
+    unsigned short writeRecordsType = WorldstateFunctions::writeWorldstate.recordsType;
+
+    if (writeRecordsType == mwmp::RECORD_TYPE::GAMESETTING)
+    {
+        tempGameSetting.variable.variableType = mwmp::FLOAT;
+        tempGameSetting.variable.floatValue = floatVar;
+    }
+    else
+    {
+        LOG_MESSAGE_SIMPLE(TimedLog::LOG_ERROR, "Tried to set float variable for record type %i which lacks that property", writeRecordsType);
+        return;
+    }
+}
+
+void RecordsDynamicFunctions::SetRecordStringVariable(const char* stringVar) noexcept
+{
+    unsigned short writeRecordsType = WorldstateFunctions::writeWorldstate.recordsType;
+
+    if (writeRecordsType == mwmp::RECORD_TYPE::GAMESETTING)
+    {
+        tempGameSetting.variable.variableType = mwmp::STRING;
+        tempGameSetting.variable.stringValue = stringVar;
+    }
+    else
+    {
+        LOG_MESSAGE_SIMPLE(TimedLog::LOG_ERROR, "Tried to set string variable for record type %i which lacks that property", writeRecordsType);
+        return;
+    }
 }
 
 void RecordsDynamicFunctions::SetRecordIdByIndex(unsigned int index, const char* id) noexcept
@@ -1807,6 +1861,11 @@ void RecordsDynamicFunctions::AddRecord() noexcept
         tempSound.baseOverrides = tempOverrides;
         WorldstateFunctions::writeWorldstate.soundRecords.push_back(tempSound);
         tempSound = {};
+    }
+    else if (writeRecordsType == mwmp::RECORD_TYPE::GAMESETTING)
+    {
+        WorldstateFunctions::writeWorldstate.gameSettingRecords.push_back(tempGameSetting);
+        tempGameSetting = {};
     }
 
     effectCount = 0;

@@ -67,6 +67,10 @@ bool parseOptions (int argc, char** argv, OMW::Engine& engine, Files::Configurat
     desc.add_options()
         ("help", "print help message")
         ("version", "print version information and quit")
+
+        ("replace", bpo::value<Files::EscapeStringVector>()->default_value(Files::EscapeStringVector(), "")
+            ->multitoken()->composing(), "settings where the values from the current source should replace those from lower-priority sources instead of being appended")
+
         ("data", bpo::value<Files::EscapePathContainer>()->default_value(Files::EscapePathContainer(), "data")
             ->multitoken()->composing(), "set data directories (later directories have higher priority)")
 
@@ -210,35 +214,6 @@ bool parseOptions (int argc, char** argv, OMW::Engine& engine, Files::Configurat
         End of tes3mp change (minor)
     */
 
-    /*
-        Start of tes3mp addition
-
-        Check for unmodified tes3mp-credits file on Windows; this makes it so people can't repackage official
-        releases with their own made-up credits, though it obviously has no bearing on unofficial releases that
-        change the checksum below
-    */
-#ifdef _WIN32
-
-    std::string creditsPath = (cfgMgr.getLocalPath() / "tes3mp-credits").string();
-
-    unsigned int expectedChecksumInt = Utils::hexStrToInt(TES3MP_CREDITS_CHECKSUM);
-    bool hasValidCredits = Utils::doesFileHaveChecksum(creditsPath + ".md", expectedChecksumInt);
-
-    if (!hasValidCredits)
-        hasValidCredits = Utils::doesFileHaveChecksum(creditsPath + ".txt", expectedChecksumInt);
-
-    if (!hasValidCredits)
-    {
-        LOG_MESSAGE_SIMPLE(TimedLog::LOG_FATAL, "The client is shutting down");
-        LOG_APPEND(TimedLog::LOG_FATAL, "- %s", TES3MP_CREDITS_ERROR);
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "tes3mp", TES3MP_CREDITS_ERROR, 0);
-        return false;
-    }
-#endif
-    /*
-        End of tes3mp addition
-    */
-
     engine.setGrabMouse(!variables["no-grab"].as<bool>());
 
     // Font encoding settings
@@ -273,6 +248,15 @@ bool parseOptions (int argc, char** argv, OMW::Engine& engine, Files::Configurat
         Log(Debug::Error) << "No content file given (esm/esp, nor omwgame/omwaddon). Aborting...";
         return false;
     }
+    std::set<std::string> contentDedupe;
+    for (const auto& contentFile : content)
+    {
+        if (!contentDedupe.insert(contentFile).second)
+        {
+            Log(Debug::Error) << "Content file specified more than once: " << contentFile << ". Aborting...";
+            return false;
+        }
+    }
 
     for (auto& file : content)
     {
@@ -295,11 +279,23 @@ bool parseOptions (int argc, char** argv, OMW::Engine& engine, Files::Configurat
     engine.setCompileAll(variables["script-all"].as<bool>());
     engine.setCompileAllDialogue(variables["script-all-dialogue"].as<bool>());
     engine.setScriptConsoleMode (variables["script-console"].as<bool>());
+    
+    /*
+        Start of tes3mp change (major)
+
+        Clients should not be allowed to set any of these unilaterally in multiplayer, so
+        disable them
+    */
+    /*
     engine.setStartupScript (variables["script-run"].as<Files::EscapeHashString>().toStdString());
     engine.setWarningsMode (variables["script-warn"].as<int>());
     engine.setScriptBlacklist (variables["script-blacklist"].as<Files::EscapeStringVector>().toStdStringVector());
     engine.setScriptBlacklistUse (variables["script-blacklist-use"].as<bool>());
     engine.setSaveGameFile (variables["load-savegame"].as<Files::EscapePath>().mPath.string());
+    */
+    /*
+        End of tes3mp change (major)
+    */
 
     // other settings
     Fallback::Map::init(variables["fallback"].as<FallbackMap>().mMap);

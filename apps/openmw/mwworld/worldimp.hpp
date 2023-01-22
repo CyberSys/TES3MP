@@ -167,7 +167,7 @@ namespace MWWorld
 
             void updateNavigator();
 
-            bool updateNavigatorObject(const MWPhysics::Object* object);
+            void updateNavigatorObject(const MWPhysics::Object& object);
 
             void ensureNeededRecords();
 
@@ -513,6 +513,17 @@ namespace MWWorld
                 Make it possible to set the inertial force of a Ptr directly
             */
             void setInertialForce(const Ptr& ptr, const osg::Vec3f &force);
+            /*
+                End of tes3mp addition
+            */
+
+            /*
+                Start of tes3mp addition
+
+                Make it possible to set whether a Ptr is on the ground or not, needed for proper
+                synchronization in multiplayer
+            */
+            void setOnGround(const Ptr& ptr, bool onGround);
             /*
                 End of tes3mp addition
             */

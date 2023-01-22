@@ -43,17 +43,22 @@ namespace MWMechanics
                     /*
                         Start of tes3mp addition
 
-                        Whenever a player loses an active spell, send an ID_PLAYER_SPELLS_ACTIVE packet to the server with it
-                    */
-                    bool isStackingSpell = !MWBase::Environment::get().getWorld()->getStore().get<ESM::Spell>().search(iter->first);
+                        Whenever the local player loses an active spell, send an ID_PLAYER_SPELLS_ACTIVE packet to the server with it
 
+                        Whenever a local actor loses an active spell, send an ID_ACTOR_SPELLS_ACTIVE packet to the server with it
+                    */
                     if (this == &MWMechanics::getPlayer().getClass().getCreatureStats(MWMechanics::getPlayer()).getActiveSpells())
                     {
-                        mwmp::Main::get().getLocalPlayer()->sendSpellsActiveRemoval(iter->first, isStackingSpell, iter->second.mTimeStamp);
+                        mwmp::Main::get().getLocalPlayer()->sendSpellsActiveRemoval(iter->first,
+                            MechanicsHelper::isStackingSpell(iter->first), iter->second.mTimeStamp);
                     }
-                    else if (mwmp::Main::get().getCellController()->isLocalActor(MechanicsHelper::getCurrentActor()))
+                    else
                     {
-                        mwmp::Main::get().getCellController()->getLocalActor(MechanicsHelper::getCurrentActor())->sendSpellsActiveRemoval(iter->first, isStackingSpell, iter->second.mTimeStamp);
+                        MWWorld::Ptr actorPtr = MWBase::Environment::get().getWorld()->searchPtrViaActorId(getActorId());
+
+                        if (mwmp::Main::get().getCellController()->isLocalActor(actorPtr))
+                            mwmp::Main::get().getCellController()->getLocalActor(actorPtr)->sendSpellsActiveRemoval(iter->first,
+                                MechanicsHelper::isStackingSpell(iter->first), iter->second.mTimeStamp);
                     }
                     /*
                         End of tes3mp addition
@@ -178,10 +183,12 @@ namespace MWMechanics
     /*
         Start of tes3mp change (major)
 
-        Add a timestamp argument so spells received from other clients can have the same timestamps they had there
+        Add a timestamp argument so spells received from other clients can have the same timestamps they had there,
+        as well as a sendPacket argument used to prevent packets from being sent back to the server when we've just
+        received them from it
     */
     void ActiveSpells::addSpell(const std::string &id, bool stack, std::vector<ActiveEffect> effects,
-                                const std::string &displayName, int casterActorId, MWWorld::TimeStamp timestamp)
+                                const std::string &displayName, int casterActorId, MWWorld::TimeStamp timestamp, bool sendPacket)
     /*
         End of tes3mp change (major)
     */
@@ -220,22 +227,22 @@ namespace MWMechanics
         /*
             Start of tes3mp addition
 
-            Whenever a player gains an active spell, send an ID_PLAYER_SPELLS_ACTIVE packet to the server with it
+            Whenever a player gains an active spell as a result of gameplay, send an ID_PLAYER_SPELLS_ACTIVE packet
+            to the server with it
         */
-        bool isStackingSpell = it == end() || stack;
-
-        ESM::ActiveSpells::ActiveSpellParams esmParams;
-        esmParams.mEffects = effects;
-        esmParams.mDisplayName = displayName;
-        esmParams.mCasterActorId = casterActorId;
-
-        if (this == &MWMechanics::getPlayer().getClass().getCreatureStats(MWMechanics::getPlayer()).getActiveSpells())
+        if (sendPacket)
         {
-            mwmp::Main::get().getLocalPlayer()->sendSpellsActiveAddition(id, isStackingSpell, esmParams, params.mTimeStamp);
-        }
-        else if (mwmp::Main::get().getCellController()->isLocalActor(MechanicsHelper::getCurrentActor()))
-        {
-            mwmp::Main::get().getCellController()->getLocalActor(MechanicsHelper::getCurrentActor())->sendSpellsActiveAddition(id, isStackingSpell, esmParams, params.mTimeStamp);
+            if (this == &MWMechanics::getPlayer().getClass().getCreatureStats(MWMechanics::getPlayer()).getActiveSpells())
+            {
+                mwmp::Main::get().getLocalPlayer()->sendSpellsActiveAddition(id, stack, params);
+            }
+            else
+            {
+                MWWorld::Ptr actorPtr = MWBase::Environment::get().getWorld()->searchPtrViaActorId(getActorId());
+
+                if (mwmp::Main::get().getCellController()->isLocalActor(actorPtr))
+                    mwmp::Main::get().getCellController()->getLocalActor(actorPtr)->sendSpellsActiveAddition(id, stack, params);
+            }
         }
         /*
             End of tes3mp addition
@@ -299,8 +306,10 @@ namespace MWMechanics
 
         Remove the spell with a certain ID and a certain timestamp, useful
         when there are stacked spells with the same ID
+
+        Returns a boolean that indicates whether the corresponding spell was found
     */
-    void ActiveSpells::removeSpellByTimestamp(const std::string& id, MWWorld::TimeStamp timestamp)
+    bool ActiveSpells::removeSpellByTimestamp(const std::string& id, MWWorld::TimeStamp timestamp)
     {
         for (TContainer::iterator spell = mSpells.begin(); spell != mSpells.end(); ++spell)
         {
@@ -310,10 +319,12 @@ namespace MWMechanics
                 {
                     spell->second.mEffects.clear();
                     mSpellsChanged = true;
-                    break;
+                    return true;
                 }
             }
         }
+
+        return false;
     }
     /*
         End of tes3mp addition
@@ -516,4 +527,22 @@ namespace MWMechanics
             mSpellsChanged = true;
         }
     }
+
+    /*
+        Start of tes3mp addition
+
+        Make it possible to set and get the actorId for these ActiveSpells
+    */
+    int ActiveSpells::getActorId() const
+    {
+        return mActorId;
+    }
+
+    void ActiveSpells::setActorId(int actorId)
+    {
+        mActorId = actorId;
+    }
+    /*
+        End of tes3mp addition
+    */
 }

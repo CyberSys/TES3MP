@@ -14,6 +14,7 @@
     {"GetHead",                 StatsFunctions::GetHead},\
     {"GetHair",                 StatsFunctions::GetHairstyle},\
     {"GetIsMale",               StatsFunctions::GetIsMale},\
+    {"GetModel",                StatsFunctions::GetModel},\
     {"GetBirthsign",            StatsFunctions::GetBirthsign},\
     \
     {"GetLevel",                StatsFunctions::GetLevel},\
@@ -45,6 +46,7 @@
     {"SetHead",                 StatsFunctions::SetHead},\
     {"SetHair",                 StatsFunctions::SetHairstyle},\
     {"SetIsMale",               StatsFunctions::SetIsMale},\
+    {"SetModel",                StatsFunctions::SetModel},\
     {"SetBirthsign",            StatsFunctions::SetBirthsign},\
     {"SetResetStats",           StatsFunctions::SetResetStats},\
     \
@@ -180,6 +182,14 @@ public:
     * \return Whether the player is male.
     */
     static int GetIsMale(unsigned short pid) noexcept;
+
+    /**
+    * \brief Get the model of a player.
+    *
+    * \param pid The player ID.
+    * \return The model of the player.
+    */
+    static const char* GetModel(unsigned short pid) noexcept;
 
     /**
     * \brief Get the birthsign of a player.
@@ -325,7 +335,7 @@ public:
     * Although confusing, the term "skill increase" for this is taken from OpenMW itself.
     *
     * \param pid The player ID.
-    * \param skillId The attribute ID.
+    * \param attributeId The attribute ID.
     * \return The increase in the attribute caused by skills.
     */
     static int GetSkillIncrease(unsigned short pid, unsigned int attributeId) noexcept;
@@ -384,6 +394,15 @@ public:
     static void SetIsMale(unsigned short pid, int state) noexcept;
 
     /**
+    * \brief Set the model of a player.
+    *
+    * \param pid The player ID.
+    * \param model The new model of the player.
+    * \return void
+    */
+    static void SetModel(unsigned short pid, const char *model) noexcept;
+
+    /**
     * \brief Set the birthsign of a player.
     *
     * \param pid The player ID.
@@ -427,7 +446,7 @@ public:
     * \brief Set the base health of a player.
     *
     * \param pid The player ID.
-    * \param name The new base health of the player.
+    * \param value The new base health of the player.
     * \return void
     */
     static void SetHealthBase(unsigned short pid, double value) noexcept;
@@ -436,7 +455,7 @@ public:
     * \brief Set the current health of a player.
     *
     * \param pid The player ID.
-    * \param name The new current health of the player.
+    * \param value The new current health of the player.
     * \return void
     */
     static void SetHealthCurrent(unsigned short pid, double value) noexcept;
@@ -445,7 +464,7 @@ public:
     * \brief Set the base magicka of a player.
     *
     * \param pid The player ID.
-    * \param name The new base magicka of the player.
+    * \param value The new base magicka of the player.
     * \return void
     */
     static void SetMagickaBase(unsigned short pid, double value) noexcept;
@@ -454,7 +473,7 @@ public:
     * \brief Set the current magicka of a player.
     *
     * \param pid The player ID.
-    * \param name The new current magicka of the player.
+    * \param value The new current magicka of the player.
     * \return void
     */
     static void SetMagickaCurrent(unsigned short pid, double value) noexcept;
@@ -463,7 +482,7 @@ public:
     * \brief Set the base fatigue of a player.
     *
     * \param pid The player ID.
-    * \param name The new base fatigue of the player.
+    * \param value The new base fatigue of the player.
     * \return void
     */
     static void SetFatigueBase(unsigned short pid, double value) noexcept;
@@ -472,7 +491,7 @@ public:
     * \brief Set the current fatigue of a player.
     *
     * \param pid The player ID.
-    * \param name The new current fatigue of the player.
+    * \param value The new current fatigue of the player.
     * \return void
     */
     static void SetFatigueCurrent(unsigned short pid, double value) noexcept;
@@ -564,7 +583,7 @@ public:
     * Although confusing, the term "skill increase" for this is taken from OpenMW itself.
     *
     * \param pid The player ID.
-    * \param skillId The attribute ID.
+    * \param attributeId The attribute ID.
     * \param value The increase in the attribute caused by skills.
     * \return void
     */

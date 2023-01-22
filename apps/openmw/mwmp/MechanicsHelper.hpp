@@ -24,6 +24,7 @@ namespace MechanicsHelper
     mwmp::Cast *getDedicatedCast(const MWWorld::Ptr& ptr);
 
     MWWorld::Ptr getPlayerPtr(const mwmp::Target& target);
+    unsigned int getActorId(const mwmp::Target& target);
 
     mwmp::Item getItem(const MWWorld::Ptr& itemPtr, int count);
     mwmp::Target getTarget(const MWWorld::Ptr& ptr);
@@ -45,15 +46,13 @@ namespace MechanicsHelper
     void processAttack(mwmp::Attack attack, const MWWorld::Ptr& attacker);
     void processCast(mwmp::Cast cast, const MWWorld::Ptr& caster);
 
+    void createSpellGfx(const MWWorld::Ptr& targetPtr, const std::vector<ESM::ActiveEffect>& mEffects);
+
+    bool isStackingSpell(const std::string& id);
     bool doesEffectListContainEffect(const ESM::EffectList& effectList, short effectId, short attributeId = -1, short skillId = -1);
     void unequipItemsByEffect(const MWWorld::Ptr& ptr, short enchantmentType, short effectId, short attributeId = -1, short skillId = -1);
 
     MWWorld::Ptr getItemPtrFromStore(const mwmp::Item& item, MWWorld::ContainerStore& store);
-
-    MWWorld::Ptr getCurrentActor();
-    void storeCurrentActor(const MWWorld::Ptr& actor);
-
-    static MWWorld::Ptr currentActor;
 }
 
 

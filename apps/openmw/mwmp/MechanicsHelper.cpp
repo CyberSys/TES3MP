@@ -13,6 +13,8 @@
 #include "../mwmechanics/spellcasting.hpp"
 #include "../mwmechanics/spellutil.hpp"
 
+#include "../mwrender/animation.hpp"
+
 #include "../mwworld/class.hpp"
 #include "../mwworld/inventorystore.hpp"
 
@@ -143,11 +145,50 @@ Cast *MechanicsHelper::getDedicatedCast(const MWWorld::Ptr& ptr)
 MWWorld::Ptr MechanicsHelper::getPlayerPtr(const Target& target)
 {
     if (target.guid == mwmp::Main::get().getLocalPlayer()->guid)
+    {
         return MWMechanics::getPlayer();
-    else if (PlayerList::getPlayer(target.guid) != nullptr)
-        return PlayerList::getPlayer(target.guid)->getPtr();
+    }
+    else
+    {
+        mwmp::DedicatedPlayer* dedicatedPlayer = mwmp::PlayerList::getPlayer(target.guid);
+
+        if (dedicatedPlayer != nullptr)
+        {
+            return dedicatedPlayer->getPtr();
+        }
+    }
 
     return nullptr;
+}
+
+unsigned int MechanicsHelper::getActorId(const mwmp::Target& target)
+{
+    int actorId = -1;
+    MWWorld::Ptr targetPtr;
+
+    if (target.isPlayer)
+    {
+        targetPtr = getPlayerPtr(target);
+    }
+    else
+    {
+        auto controller = mwmp::Main::get().getCellController();
+        if (controller->isLocalActor(target.refNum, target.mpNum))
+        {
+            targetPtr = controller->getLocalActor(target.refNum, target.mpNum)->getPtr();
+        }
+        else if (controller->isDedicatedActor(target.refNum, target.mpNum))
+        {
+            targetPtr = controller->getDedicatedActor(target.refNum, target.mpNum)->getPtr();
+        }
+    }
+
+    if (targetPtr)
+    {
+        actorId = targetPtr.getClass().getCreatureStats(targetPtr).getActorId();
+    }
+
+    return actorId;
 }
 
 mwmp::Item MechanicsHelper::getItem(const MWWorld::Ptr& itemPtr, int count)
@@ -523,6 +564,33 @@ void MechanicsHelper::processCast(Cast cast, const MWWorld::Ptr& caster)
     }
 }
 
+void MechanicsHelper::createSpellGfx(const MWWorld::Ptr& targetPtr, const std::vector<ESM::ActiveEffect>& mEffects)
+{
+    for (auto&& effect : mEffects)
+    {
+        const ESM::MagicEffect* magicEffect = MWBase::Environment::get().getWorld()->getStore().get<ESM::MagicEffect>().find(effect.mEffectId);
+
+        const ESM::Static* castStatic;
+        if (!magicEffect->mHit.empty())
+            castStatic = MWBase::Environment::get().getWorld()->getStore().get<ESM::Static>().find(magicEffect->mHit);
+        else
+            castStatic = MWBase::Environment::get().getWorld()->getStore().get<ESM::Static>().find("VFX_DefaultHit");
+
+        bool loop = (magicEffect->mData.mFlags & ESM::MagicEffect::ContinuousVfx) != 0;
+        // Note: in case of non actor, a free effect should be fine as well
+        MWRender::Animation* anim = MWBase::Environment::get().getWorld()->getAnimation(targetPtr);
+        if (anim && !castStatic->mModel.empty())
+        {
+            anim->addEffect("meshes\\" + castStatic->mModel, magicEffect->mIndex, loop, "", magicEffect->mParticle);
+        }
+    }
+}
+
+bool MechanicsHelper::isStackingSpell(const std::string& id)
+{
+    return !MWBase::Environment::get().getWorld()->getStore().get<ESM::Spell>().search(id);
+}
+
 bool MechanicsHelper::doesEffectListContainEffect(const ESM::EffectList& effectList, short effectId, short attributeId, short skillId)
 {
     for (const auto &effect : effectList.mList)
@@ -588,14 +656,4 @@ MWWorld::Ptr MechanicsHelper::getItemPtrFromStore(const mwmp::Item& item, MWWorl
     }
 
     return closestPtr;
-}
-
-MWWorld::Ptr MechanicsHelper::getCurrentActor()
-{
-    return currentActor;
-}
-
-void MechanicsHelper::storeCurrentActor(const MWWorld::Ptr& actor)
-{
-    currentActor = actor;
 }

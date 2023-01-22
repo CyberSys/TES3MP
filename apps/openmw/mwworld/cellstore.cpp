@@ -605,8 +605,11 @@ namespace MWWorld
     {
         const unsigned int mRefNumToFind;
         const unsigned int mMpNumToFind;
+        const std::string mRefIdToFind;
+        const bool mActorsOnly;
     public:
-        SearchExactVisitor(const unsigned int refNum, const unsigned int mpNum) : mRefNumToFind(refNum), mMpNumToFind(mpNum) {}
+        SearchExactVisitor(const unsigned int refNum, const unsigned int mpNum, const std::string refId, const bool actorsOnly) :
+            mRefNumToFind(refNum), mMpNumToFind(mpNum), mRefIdToFind(refId), mActorsOnly(actorsOnly) {}
 
         Ptr mFound;
 
@@ -614,8 +617,14 @@ namespace MWWorld
         {
             if (ptr.getCellRef().getRefNum().mIndex == mRefNumToFind && ptr.getCellRef().getMpNum() == mMpNumToFind)
             {
-                mFound = ptr;
-                return false;
+                if (!mActorsOnly || ptr.getClass().isActor())
+                {
+                    if (mRefIdToFind.empty() || Misc::StringUtils::ciEqual(ptr.getCellRef().getRefId(), mRefIdToFind))
+                    {
+                        mFound = ptr;
+                        return false;
+                    }
+                }
             }
             return true;
         }
@@ -629,13 +638,13 @@ namespace MWWorld
 
         Allow the searching of objects by their reference numbers
     */
-    Ptr CellStore::searchExact (const unsigned int refNum, const unsigned int mpNum)
+    Ptr CellStore::searchExact (const unsigned int refNum, const unsigned int mpNum, const std::string refId, bool actorsOnly)
     {
         // Ensure that all objects searched for have a valid reference number
         if (refNum == 0 && mpNum == 0)
             return 0;
 
-        SearchExactVisitor searchVisitor(refNum, mpNum);
+        SearchExactVisitor searchVisitor(refNum, mpNum, refId, actorsOnly);
         forEach(searchVisitor);
         return searchVisitor.mFound;
     }

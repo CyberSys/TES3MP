@@ -26,6 +26,14 @@ void SpellFunctions::ClearSpellsActiveChanges(unsigned short pid) noexcept
     player->spellsActiveChanges.activeSpells.clear();
 }
 
+void SpellFunctions::ClearCooldownChanges(unsigned short pid) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, );
+
+    player->cooldownChanges.clear();
+}
+
 unsigned int SpellFunctions::GetSpellbookChangesSize(unsigned short pid) noexcept
 {
     Player *player;
@@ -58,6 +66,14 @@ unsigned int SpellFunctions::GetSpellsActiveChangesAction(unsigned short pid) no
     return player->spellsActiveChanges.action;
 }
 
+unsigned int SpellFunctions::GetCooldownChangesSize(unsigned short pid) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, 0);
+
+    return player->cooldownChanges.size();
+}
+
 void SpellFunctions::SetSpellbookChangesAction(unsigned short pid, unsigned char action) noexcept
 {
     Player *player;
@@ -85,13 +101,14 @@ void SpellFunctions::AddSpell(unsigned short pid, const char* spellId) noexcept
     player->spellbookChanges.spells.push_back(spell);
 }
 
-void SpellFunctions::AddSpellActive(unsigned short pid, const char* spellId, const char* displayName) noexcept
+void SpellFunctions::AddSpellActive(unsigned short pid, const char* spellId, const char* displayName, bool stackingState) noexcept
 {
     Player* player;
     GET_PLAYER(pid, player, );
 
     mwmp::ActiveSpell spell;
     spell.id = spellId;
+    spell.isStackingSpell = stackingState;
     spell.params.mDisplayName = displayName;
     spell.params.mEffects = storedActiveEffects;
 
@@ -113,6 +130,19 @@ void SpellFunctions::AddSpellActiveEffect(unsigned short pid, int effectId, doub
     effect.mArg = arg;
 
     storedActiveEffects.push_back(effect);
+}
+
+void SpellFunctions::AddCooldownSpell(unsigned short pid, const char* spellId, unsigned int startDay, double startHour) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, );
+
+    mwmp::SpellCooldown spellCooldown;
+    spellCooldown.id = spellId;
+    spellCooldown.startTimestampDay = startDay;
+    spellCooldown.startTimestampHour = startHour;
+
+    player->cooldownChanges.push_back(spellCooldown);
 }
 
 const char *SpellFunctions::GetSpellId(unsigned short pid, unsigned int index) noexcept
@@ -146,6 +176,17 @@ const char* SpellFunctions::GetSpellsActiveDisplayName(unsigned short pid, unsig
         return "invalid";
 
     return player->spellsActiveChanges.activeSpells.at(index).params.mDisplayName.c_str();
+}
+
+bool SpellFunctions::GetSpellsActiveStackingState(unsigned short pid, unsigned int index) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, false);
+
+    if (index >= player->spellsActiveChanges.activeSpells.size())
+        return false;
+
+    return player->spellsActiveChanges.activeSpells.at(index).isStackingSpell;
 }
 
 unsigned int SpellFunctions::GetSpellsActiveEffectCount(unsigned short pid, unsigned int index) noexcept
@@ -214,6 +255,99 @@ double SpellFunctions::GetSpellsActiveEffectTimeLeft(unsigned short pid, unsigne
     return player->spellsActiveChanges.activeSpells.at(spellIndex).params.mEffects.at(effectIndex).mTimeLeft;
 }
 
+bool SpellFunctions::DoesSpellsActiveHavePlayerCaster(unsigned short pid, unsigned int index) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, false);
+
+    if (index >= player->spellsActiveChanges.activeSpells.size())
+        return false;
+
+    return player->spellsActiveChanges.activeSpells.at(index).caster.isPlayer;
+}
+
+int SpellFunctions::GetSpellsActiveCasterPid(unsigned short pid, unsigned int index) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, -1);
+
+    if (index >= player->spellsActiveChanges.activeSpells.size())
+        return -1;
+
+    Player* caster = Players::getPlayer(player->spellsActiveChanges.activeSpells.at(index).caster.guid);
+
+    if (caster != nullptr)
+        return caster->getId();
+
+    return -1;
+}
+
+const char* SpellFunctions::GetSpellsActiveCasterRefId(unsigned short pid, unsigned int index) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, "");
+
+    if (index >= player->spellsActiveChanges.activeSpells.size())
+        return "";
+
+    return player->spellsActiveChanges.activeSpells.at(index).caster.refId.c_str();
+}
+
+unsigned int SpellFunctions::GetSpellsActiveCasterRefNum(unsigned short pid, unsigned int index) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, 0);
+
+    if (index >= player->spellsActiveChanges.activeSpells.size())
+        return 0;
+
+    return player->spellsActiveChanges.activeSpells.at(index).caster.refNum;
+}
+
+unsigned int SpellFunctions::GetSpellsActiveCasterMpNum(unsigned short pid, unsigned int index) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, 0);
+
+    if (index >= player->spellsActiveChanges.activeSpells.size())
+        return 0;
+
+    return player->spellsActiveChanges.activeSpells.at(index).caster.mpNum;
+}
+
+const char* SpellFunctions::GetCooldownSpellId(unsigned short pid, unsigned int index) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, "");
+
+    if (index >= player->cooldownChanges.size())
+        return "invalid";
+
+    return player->cooldownChanges.at(index).id.c_str();
+}
+
+unsigned int SpellFunctions::GetCooldownStartDay(unsigned short pid, unsigned int index) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, 0);
+
+    if (index >= player->cooldownChanges.size())
+        return 0;
+
+    return player->cooldownChanges.at(index).startTimestampDay;
+}
+
+double SpellFunctions::GetCooldownStartHour(unsigned short pid, unsigned int index) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, 0.0);
+
+    if (index >= player->cooldownChanges.size())
+        return 0.0;
+
+    return player->cooldownChanges.at(index).startTimestampHour;
+}
+
 void SpellFunctions::SendSpellbookChanges(unsigned short pid, bool sendToOtherPlayers, bool skipAttachedPlayer) noexcept
 {
     Player *player;
@@ -240,6 +374,16 @@ void SpellFunctions::SendSpellsActiveChanges(unsigned short pid, bool sendToOthe
         packet->Send(false);
     if (sendToOtherPlayers)
         packet->Send(true);
+}
+
+void SpellFunctions::SendCooldownChanges(unsigned short pid) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, );
+
+    mwmp::PlayerPacket* packet = mwmp::Networking::get().getPlayerPacketController()->GetPacket(ID_PLAYER_COOLDOWNS);
+    packet->setPlayer(player);
+    packet->Send(false);
 }
 
 // All methods below are deprecated versions of methods from above

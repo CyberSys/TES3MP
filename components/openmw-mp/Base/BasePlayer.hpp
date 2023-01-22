@@ -208,6 +208,7 @@ namespace mwmp
 
         InventoryChanges inventoryChanges;
         SpellbookChanges spellbookChanges;
+        std::vector<SpellCooldown> cooldownChanges;
         SpellsActiveChanges spellsActiveChanges;
         std::vector<QuickKey> quickKeyChanges;
         std::vector<JournalItem> journalChanges;
@@ -231,6 +232,7 @@ namespace mwmp
 
         unsigned int movementFlags = 0;
         char drawState;
+        bool isJumping = false;
         bool isFlying = false;
         bool hasTcl = false;
 
@@ -251,6 +253,7 @@ namespace mwmp
         std::string chatMessage;
         CharGenState charGenState;
         std::map<std::string, std::string> gameSettings;
+        std::map<std::string, std::string> vrSettings;
 
         std::string sound;
         Animation animation;

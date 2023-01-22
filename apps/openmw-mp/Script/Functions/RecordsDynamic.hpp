@@ -108,6 +108,9 @@
     {"SetRecordCloseSound",                     RecordsDynamicFunctions::SetRecordCloseSound},\
     \
     {"SetRecordScriptText",                     RecordsDynamicFunctions::SetRecordScriptText},\
+    {"SetRecordIntegerVariable",                RecordsDynamicFunctions::SetRecordIntegerVariable},\
+    {"SetRecordFloatVariable",                  RecordsDynamicFunctions::SetRecordFloatVariable},\
+    {"SetRecordStringVariable",                 RecordsDynamicFunctions::SetRecordStringVariable},\
     \
     {"SetRecordIdByIndex",                      RecordsDynamicFunctions::SetRecordIdByIndex},\
     {"SetRecordEnchantmentIdByIndex",           RecordsDynamicFunctions::SetRecordEnchantmentIdByIndex},\
@@ -437,7 +440,7 @@ public:
     * \brief Set the subtype of the temporary record stored on the server for
     * the currently specified record type.
     *
-    * \param type The spell type.
+    * \param subtype The spell type.
     * \return void
     */
     static void SetRecordSubtype(unsigned int subtype) noexcept;
@@ -554,7 +557,7 @@ public:
     * \brief Set the item quality of the temporary record stored on the server for the
     * currently specified record type.
     *
-    * \param weight The weight of the record.
+    * \param quality The quality of the record.
     * \return void
     */
     static void SetRecordQuality(double quality) noexcept;
@@ -581,7 +584,7 @@ public:
     * \brief Set the radius of the temporary record stored on the server for the currently
     * specified record type.
     *
-    * \param uses The radius of the record.
+    * \param radius The radius of the record.
     * \return void
     */
     static void SetRecordRadius(int radius) noexcept;
@@ -590,7 +593,9 @@ public:
     * \brief Set the color of the temporary record stored on the server for the currently
     * specified record type.
     *
-    * \param color The color of the record.
+    * \param red The red value of the record.
+    * \param green The green value of the record.
+    * \param blue The blue value of the record.
     * \return void
     */
     static void SetRecordColor(unsigned int red, unsigned int green, unsigned int blue) noexcept;
@@ -714,7 +719,7 @@ public:
     * \brief Set the head of the temporary record stored on the server for the
     * currently specified record type.
     *
-    * \param hair The head of the record.
+    * \param head The head of the record.
     * \return void
     */
     static void SetRecordHead(const char* head) noexcept;
@@ -723,7 +728,7 @@ public:
     * \brief Set the gender of the temporary record stored on the server for the
     * currently specified record type (0 for female, 1 for male).
     *
-    * \param hair The race of the record.
+    * \param gender The gender of the record.
     * \return void
     */
     static void SetRecordGender(unsigned int gender) noexcept;
@@ -732,7 +737,7 @@ public:
     * \brief Set the race of the temporary record stored on the server for the
     * currently specified record type.
     *
-    * \param hair The race of the record.
+    * \param race The race of the record.
     * \return void
     */
     static void SetRecordRace(const char* race) noexcept;
@@ -741,7 +746,7 @@ public:
     * \brief Set the character class of the temporary record stored on the server
     * for the currently specified record type.
     *
-    * \param hair The character class of the record.
+    * \param charClass The character class of the record.
     * \return void
     */
     static void SetRecordClass(const char* charClass) noexcept;
@@ -876,7 +881,7 @@ public:
     * \brief Set the minimum range of the temporary record stored on the server for the currently
     * specified record type.
     *
-    * \param volume The minimum range of the record.
+    * \param minRange The minimum range of the record.
     * \return void
     */
     static void SetRecordMinRange(double minRange) noexcept;
@@ -885,7 +890,7 @@ public:
     * \brief Set the maximum range of the temporary record stored on the server for the currently
     * specified record type.
     *
-    * \param volume The maximum range of the record.
+    * \param maxRange The maximum range of the record.
     * \return void
     */
     static void SetRecordMaxRange(double maxRange) noexcept;
@@ -912,10 +917,37 @@ public:
     * \brief Set the script text of the temporary record stored on the server for the
     * currently specified record type.
     *
-    * \param sound The script text of the record.
+    * \param scriptText The script text of the record.
     * \return void
     */
     static void SetRecordScriptText(const char* scriptText) noexcept;
+
+    /**
+    * \brief Set the integer variable of the temporary record stored on the server for the
+    * currently specified record type.
+    *
+    * \param intVar The integer variable of the record.
+    * \return void
+    */
+    static void SetRecordIntegerVariable(int intVar) noexcept;
+
+    /**
+    * \brief Set the float variable of the temporary record stored on the server for the
+    * currently specified record type.
+    *
+    * \param floatVar The float variable of the record.
+    * \return void
+    */
+    static void SetRecordFloatVariable(double floatVar) noexcept;
+
+    /**
+    * \brief Set the string variable of the temporary record stored on the server for the
+    * currently specified record type.
+    *
+    * \param stringVar The string variable of the record.
+    * \return void
+    */
+    static void SetRecordStringVariable(const char* stringVar) noexcept;
 
     /**
     * \brief Set the id of the record at a certain index in the records stored on the server.
@@ -1040,7 +1072,7 @@ public:
     /**
     * \brief Set the id of the of the temporary inventory item stored on the server.
     *
-    * \param partId The id of the inventory item.
+    * \param itemId The id of the inventory item.
     * \return void
     */
     static void SetRecordInventoryItemId(const char* itemId) noexcept;

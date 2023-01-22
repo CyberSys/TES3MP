@@ -52,12 +52,19 @@
     {"GetActorSpellsActiveChangesAction",      ActorFunctions::GetActorSpellsActiveChangesAction},\
     {"GetActorSpellsActiveId",                 ActorFunctions::GetActorSpellsActiveId},\
     {"GetActorSpellsActiveDisplayName",        ActorFunctions::GetActorSpellsActiveDisplayName},\
+    {"GetActorSpellsActiveStackingState",      ActorFunctions::GetActorSpellsActiveStackingState},\
     {"GetActorSpellsActiveEffectCount",        ActorFunctions::GetActorSpellsActiveEffectCount},\
     {"GetActorSpellsActiveEffectId",           ActorFunctions::GetActorSpellsActiveEffectId},\
     {"GetActorSpellsActiveEffectArg",          ActorFunctions::GetActorSpellsActiveEffectArg},\
     {"GetActorSpellsActiveEffectMagnitude",    ActorFunctions::GetActorSpellsActiveEffectMagnitude},\
     {"GetActorSpellsActiveEffectDuration",     ActorFunctions::GetActorSpellsActiveEffectDuration},\
     {"GetActorSpellsActiveEffectTimeLeft",     ActorFunctions::GetActorSpellsActiveEffectTimeLeft},\
+    \
+    {"DoesActorSpellsActiveHavePlayerCaster",  ActorFunctions::DoesActorSpellsActiveHavePlayerCaster},\
+    {"GetActorSpellsActiveCasterPid",          ActorFunctions::GetActorSpellsActiveCasterPid},\
+    {"GetActorSpellsActiveCasterRefId",        ActorFunctions::GetActorSpellsActiveCasterRefId},\
+    {"GetActorSpellsActiveCasterRefNum",       ActorFunctions::GetActorSpellsActiveCasterRefNum},\
+    {"GetActorSpellsActiveCasterMpNum",        ActorFunctions::GetActorSpellsActiveCasterMpNum},\
     \
     {"DoesActorHavePosition",                  ActorFunctions::DoesActorHavePosition},\
     {"DoesActorHaveStatsDynamic",              ActorFunctions::DoesActorHaveStatsDynamic},\
@@ -465,6 +472,15 @@ public:
     static const char* GetActorSpellsActiveDisplayName(unsigned int actorIndex, unsigned int spellIndex) noexcept;
 
     /**
+    * \brief Get the spell stacking state at a certain index in an actor's latest spells active changes.
+    *
+    * \param actorIndex The index of the actor.
+    * \param spellIndex The index of the spell.
+    * \return The spell stacking state.
+    */
+    static bool GetActorSpellsActiveStackingState(unsigned int actorIndex, unsigned int spellIndex) noexcept;
+
+    /**
     * \brief Get the number of effects at an index in an actor's latest spells active changes.
     *
     * \param actorIndex The index of the actor.
@@ -522,6 +538,52 @@ public:
     * \return The time left for the effect.
     */
     static double GetActorSpellsActiveEffectTimeLeft(unsigned int actorIndex, unsigned int spellIndex, unsigned int effectIndex) noexcept;
+
+    /**
+    * \brief Check whether the spell at a certain index in an actor's latest spells active changes has a player
+    *        as its caster.
+    *
+    * \param actorIndex The index of the actor.
+    * \param spellIndex The index of the spell.
+    * \return Whether a player is the caster of the spell.
+    */
+    static bool DoesActorSpellsActiveHavePlayerCaster(unsigned int actorIndex, unsigned int spellIndex) noexcept;
+
+    /**
+    * \brief Get the player ID of the caster of the spell at a certain index in an actor's latest spells active changes.
+    *
+    * \param actorIndex The index of the actor.
+    * \param spellIndex The index of the spell.
+    * \return The player ID of the caster.
+    */
+    static int GetActorSpellsActiveCasterPid(unsigned int actorIndex, unsigned int spellIndex) noexcept;
+
+    /**
+    * \brief Get the refId of the actor caster of the spell at a certain index in an actor's latest spells active changes.
+    *
+    * \param actorIndex The index of the actor.
+    * \param spellIndex The index of the spell.
+    * \return The refId of the caster.
+    */
+    static const char* GetActorSpellsActiveCasterRefId(unsigned int actorIndex, unsigned int spellIndex) noexcept;
+
+    /**
+    * \brief Get the refNum of the actor caster of the spell at a certain index in an actor's latest spells active changes.
+    *
+    * \param actorIndex The index of the actor.
+    * \param spellIndex The index of the spell.
+    * \return The refNum of the caster.
+    */
+    static unsigned int GetActorSpellsActiveCasterRefNum(unsigned int actorIndex, unsigned int spellIndex) noexcept;
+
+    /**
+    * \brief Get the mpNum of the actor caster of the spell at a certain index in an actor's latest spells active changes.
+    *
+    * \param actorIndex The index of the actor.
+    * \param spellIndex The index of the spell.
+    * \return The mpNum of the caster.
+    */
+    static unsigned int GetActorSpellsActiveCasterMpNum(unsigned int actorIndex, unsigned int spellIndex) noexcept;
 
     /**
     * \brief Check whether there is any positional data for the actor at a certain index in
@@ -766,7 +828,7 @@ public:
     /**
     * \brief Set the distance of the AI package associated with the current AI action.
     *
-    * \param duration The distance of the package.
+    * \param distance The distance of the package.
     * \return void
     */
     static void SetActorAIDistance(unsigned int distance) noexcept;
@@ -817,9 +879,10 @@ public:
     *
     * \param spellId The spellId of the spell.
     * \param displayName The displayName of the spell.
+    * \param stackingState Whether the spell should stack with other instances of itself.
     * \return void
     */
-    static void AddActorSpellActive(const char* spellId, const char* displayName) noexcept;
+    static void AddActorSpellActive(const char* spellId, const char* displayName, bool stackingState) noexcept;
 
     /**
     * \brief Add a new effect to the next active spell that will be added to the temporary actor

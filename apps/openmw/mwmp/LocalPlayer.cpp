@@ -155,7 +155,6 @@ bool LocalPlayer::processCharGen()
         }
         getNetworking()->getPlayerPacket(ID_PLAYER_CHARGEN)->setPlayer(this);
         getNetworking()->getPlayerPacket(ID_PLAYER_CHARGEN)->Send();
-        charGenState.currentStage++;
 
         return false;
     }
@@ -424,8 +423,8 @@ void LocalPlayer::updateCell(bool forceUpdate)
     {
         LOG_MESSAGE_SIMPLE(TimedLog::LOG_INFO, "Sending ID_PLAYER_CELL_CHANGE about LocalPlayer to server");
 
-        LOG_APPEND(TimedLog::LOG_INFO, "- Moved from %s to %s", cell.getDescription().c_str(),
-                   ptrCell->getDescription().c_str());
+        LOG_APPEND(TimedLog::LOG_INFO, "- Moved from %s to %s", cell.getShortDescription().c_str(),
+                   ptrCell->getShortDescription().c_str());
 
         if (!Misc::StringUtils::ciEqual(cell.mRegion, ptrCell->mRegion))
         {
@@ -590,6 +589,7 @@ void LocalPlayer::updateAttackOrCast()
         getNetworking()->getPlayerPacket(ID_PLAYER_CAST)->Send();
 
         cast.shouldSend = false;
+        cast.hasProjectile = false;
     }
 }
 
@@ -612,7 +612,7 @@ void LocalPlayer::updateAnimFlags(bool forceUpdate)
     bool isForceMoveJumping = ptrNpcStats.getMovementFlag(CreatureStats::Flag_ForceMoveJump);
     
     isFlying = world->isFlying(ptrPlayer);
-    bool isJumping = !world->isOnGround(ptrPlayer) && !isFlying;
+    isJumping = !world->isOnGround(ptrPlayer) && !isFlying;
 
     // We need to send a new packet at the end of jumping, flying and TCL-ing too,
     // so keep track of what we were doing last frame
@@ -719,9 +719,10 @@ void LocalPlayer::addSpellsActive()
     for (const auto& activeSpell : spellsActiveChanges.activeSpells)
     {
         MWWorld::TimeStamp timestamp = MWWorld::TimeStamp(activeSpell.timestampHour, activeSpell.timestampDay);
+        int casterActorId = MechanicsHelper::getActorId(activeSpell.caster);
 
         // Don't do a check for a spell's existence, because active effects from potions need to be applied here too
-        activeSpells.addSpell(activeSpell.id, activeSpell.isStackingSpell, activeSpell.params.mEffects, activeSpell.params.mDisplayName, 1, timestamp);
+        activeSpells.addSpell(activeSpell.id, activeSpell.isStackingSpell, activeSpell.params.mEffects, activeSpell.params.mDisplayName, casterActorId, timestamp, false);
     }
 }
 
@@ -823,11 +824,18 @@ void LocalPlayer::removeSpellsActive()
  
     for (const auto& activeSpell : spellsActiveChanges.activeSpells)
     {
+        LOG_APPEND(TimedLog::LOG_INFO, "- removing %sstacking active spell %s", activeSpell.isStackingSpell ? "" : "non-", activeSpell.id.c_str());
+
         // Remove stacking spells based on their timestamps
         if (activeSpell.isStackingSpell)
         {
             MWWorld::TimeStamp timestamp = MWWorld::TimeStamp(activeSpell.timestampHour, activeSpell.timestampDay);
-            activeSpells.removeSpellByTimestamp(activeSpell.id, timestamp);
+            bool foundSpell = activeSpells.removeSpellByTimestamp(activeSpell.id, timestamp);
+
+            if (!foundSpell)
+            {
+                LOG_APPEND(TimedLog::LOG_INFO, "-- spell with this ID and timestamp could not be found!");
+            }
         }
         else
         {
@@ -938,10 +946,14 @@ void LocalPlayer::setCharacter()
             player.mRace = npc.mRace;
             player.mHead = npc.mHead;
             player.mHair = npc.mHair;
+            player.mModel = npc.mModel;
             player.setIsMale(npc.isMale());
             world->createRecord(player);
 
             MWBase::Environment::get().getMechanicsManager()->playerLoaded();
+
+            // This is needed to update the player's model instantly if they're in 3rd person
+            world->reattachPlayerCamera();
         }
 
         MWBase::Environment::get().getWindowManager()->getInventoryWindow()->rebuildAvatar();
@@ -1264,6 +1276,23 @@ void LocalPlayer::setSpellsActive()
 
     // Proceed by adding spells active
     addSpellsActive();
+}
+
+void LocalPlayer::setCooldowns()
+{
+    MWBase::World* world = MWBase::Environment::get().getWorld();
+    MWWorld::Ptr ptrPlayer = getPlayerPtr();
+    MWMechanics::Spells& ptrSpells = ptrPlayer.getClass().getCreatureStats(ptrPlayer).getSpells();
+
+    for (const auto& cooldown : cooldownChanges)
+    {
+        if (world->getStore().get<ESM::Spell>().search(cooldown.id))
+        {
+            const ESM::Spell* spell = world->getStore().get<ESM::Spell>().search(cooldown.id);
+
+            ptrSpells.setPowerUseTimestamp(spell, cooldown.startTimestampDay, cooldown.startTimestampHour);
+        }
+    }
 }
 
 void LocalPlayer::setQuickKeys()
@@ -1600,7 +1629,7 @@ void LocalPlayer::sendSpellsActive()
     getNetworking()->getPlayerPacket(ID_PLAYER_SPELLS_ACTIVE)->Send();
 }
 
-void LocalPlayer::sendSpellsActiveAddition(const std::string id, bool isStackingSpell, ESM::ActiveSpells::ActiveSpellParams params, MWWorld::TimeStamp timestamp)
+void LocalPlayer::sendSpellsActiveAddition(const std::string id, bool isStackingSpell, const MWMechanics::ActiveSpells::ActiveSpellParams& params)
 {
     // Skip any bugged spells that somehow have clientside-only dynamic IDs
     if (id.find("$dynamic") != std::string::npos)
@@ -1608,12 +1637,17 @@ void LocalPlayer::sendSpellsActiveAddition(const std::string id, bool isStacking
 
     spellsActiveChanges.activeSpells.clear();
 
+
+    MWWorld::Ptr caster = MWBase::Environment::get().getWorld()->searchPtrViaActorId(params.mCasterActorId);
+
     mwmp::ActiveSpell spell;
     spell.id = id;
     spell.isStackingSpell = isStackingSpell;
-    spell.timestampDay = timestamp.getDay();
-    spell.timestampHour = timestamp.getHour();
-    spell.params = params;
+    spell.caster = MechanicsHelper::getTarget(caster);
+    spell.timestampDay = params.mTimeStamp.getDay();
+    spell.timestampHour = params.mTimeStamp.getHour();
+    spell.params.mEffects = params.mEffects;
+    spell.params.mDisplayName = params.mDisplayName;
     spellsActiveChanges.activeSpells.push_back(spell);
 
     LOG_MESSAGE_SIMPLE(TimedLog::LOG_INFO, "Sending active spell addition with stacking %s, timestamp %i %f",
@@ -1645,6 +1679,25 @@ void LocalPlayer::sendSpellsActiveRemoval(const std::string id, bool isStackingS
     spellsActiveChanges.action = mwmp::SpellsActiveChanges::REMOVE;
     getNetworking()->getPlayerPacket(ID_PLAYER_SPELLS_ACTIVE)->setPlayer(this);
     getNetworking()->getPlayerPacket(ID_PLAYER_SPELLS_ACTIVE)->Send();
+}
+
+void LocalPlayer::sendCooldownChange(std::string id, int startTimestampDay, float startTimestampHour)
+{
+    // Skip any bugged spells that somehow have clientside-only dynamic IDs
+    if (id.find("$dynamic") != std::string::npos)
+        return;
+
+    cooldownChanges.clear();
+
+    SpellCooldown spellCooldown;
+    spellCooldown.id = id;
+    spellCooldown.startTimestampDay = startTimestampDay;
+    spellCooldown.startTimestampHour = startTimestampHour;
+
+    cooldownChanges.push_back(spellCooldown);
+;
+    getNetworking()->getPlayerPacket(ID_PLAYER_COOLDOWNS)->setPlayer(this);
+    getNetworking()->getPlayerPacket(ID_PLAYER_COOLDOWNS)->Send();
 }
 
 void LocalPlayer::sendQuickKey(unsigned short slot, int type, const std::string& itemId)
@@ -1848,7 +1901,7 @@ void LocalPlayer::storeCellState(const ESM::Cell& storedCell, int stateType)
     {
         // If there's already a cell state recorded for this particular cell,
         // remove it
-        if (storedCell.getDescription() == (*iter).cell.getDescription())
+        if (storedCell.getShortDescription() == (*iter).cell.getShortDescription())
             iter = cellStateChanges.erase(iter);
         else
             ++iter;

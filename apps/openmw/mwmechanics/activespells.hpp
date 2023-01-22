@@ -51,6 +51,16 @@ namespace MWMechanics
             mutable MagicEffects mEffects;
             mutable bool mSpellsChanged;
 
+            /*
+                Start of tes3mp addition
+
+                Track the actorId corresponding to these ActiveSpells
+            */
+            int mActorId;
+            /*
+                End of tes3mp addition
+            */
+
             void rebuildEffects() const;
 
             /// Add any effects that are in "from" and not in "addTo" to "addTo"
@@ -83,7 +93,7 @@ namespace MWMechanics
                 Add a separate addSpell() with a timestamp argument
             */
             void addSpell (const std::string& id, bool stack, std::vector<ActiveEffect> effects,
-                           const std::string& displayName, int casterActorId, MWWorld::TimeStamp timestamp);
+                           const std::string& displayName, int casterActorId, MWWorld::TimeStamp timestamp, bool sendPacket = true);
             /*
                 End of tes3mp addition
             */
@@ -97,7 +107,7 @@ namespace MWMechanics
                 Remove the spell with a certain ID and a certain timestamp, useful
                 when there are stacked spells with the same ID
             */
-            void removeSpellByTimestamp(const std::string& id, MWWorld::TimeStamp timestamp);
+            bool removeSpellByTimestamp(const std::string& id, MWWorld::TimeStamp timestamp);
             /*
                 End of tes3mp addition
             */
@@ -145,6 +155,17 @@ namespace MWMechanics
             const MagicEffects& getMagicEffects() const;
 
             void visitEffectSources (MWMechanics::EffectSourceVisitor& visitor) const;
+
+            /*
+                Start of tes3mp addition
+
+                Make it possible to set and get the actorId for these ActiveSpells
+            */
+            int getActorId() const;
+            void setActorId(int actorId);
+            /*
+                End of tes3mp addition
+            */
 
     };
 }

@@ -2,6 +2,7 @@
 #define OPENMW_LOCALPLAYER_HPP
 
 #include <components/openmw-mp/Base/BasePlayer.hpp>
+#include "../mwmechanics/activespells.hpp"
 #include "../mwworld/ptr.hpp"
 #include "../mwworld/timestamp.hpp"
 #include <RakNetTypes.h>
@@ -75,6 +76,7 @@ namespace mwmp
         void setInventory();
         void setSpellbook();
         void setSpellsActive();
+        void setCooldowns();
         void setQuickKeys();
         void setFactions();
         void setBooks();
@@ -92,8 +94,9 @@ namespace mwmp
         void sendSpellbook();
         void sendSpellChange(std::string id, unsigned int action);
         void sendSpellsActive();
-        void sendSpellsActiveAddition(const std::string id, bool isStackingSpell, ESM::ActiveSpells::ActiveSpellParams params, MWWorld::TimeStamp timestamp);
+        void sendSpellsActiveAddition(const std::string id, bool isStackingSpell, const MWMechanics::ActiveSpells::ActiveSpellParams& params);
         void sendSpellsActiveRemoval(const std::string id, bool isStackingSpell, MWWorld::TimeStamp timestamp);
+        void sendCooldownChange(std::string id, int startTimestampDay, float startTimestampHour);
         void sendQuickKey(unsigned short slot, int type, const std::string& itemId = "");
         void sendJournalEntry(const std::string& quest, int index, const MWWorld::Ptr& actor);
         void sendJournalIndex(const std::string& quest, int index);

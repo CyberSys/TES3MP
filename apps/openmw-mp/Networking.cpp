@@ -25,8 +25,6 @@
 #include "processors/ObjectProcessor.hpp"
 #include "processors/WorldstateProcessor.hpp"
 
-#include "handleInput.cpp"
-
 using namespace mwmp;
 
 Networking *Networking::sThis = 0;
@@ -491,25 +489,11 @@ void signalHandler(int signum)
 {
     std::cout << "Interrupt signal (" << signum << ") received.\n";
     //15 is SIGTERM(Normal OS stop call), 2 is SIGINT(Ctrl+C)
-    if(signum == 15 or signum == 2)
+    if(signum == 15 || signum == 2)
     {
         killLoop = true;
     }
 }
-
-#ifdef _WIN32
-BOOL WINAPI sigIntHandler(_In_ DWORD dwCtrlType) {
-    switch (dwCtrlType)
-    {
-    case CTRL_C_EVENT:
-        signalHandler(15);
-        return TRUE;
-    default:
-        // Pass signal on to the next handler
-        return FALSE;
-    }
-}
-#endif
 
 int Networking::mainLoop()
 {
@@ -521,15 +505,16 @@ int Networking::mainLoop()
     sigIntHandler.sa_handler = signalHandler;
     sigemptyset(&sigIntHandler.sa_mask);
     sigIntHandler.sa_flags = 0;
-    sigaction(SIGTERM, &sigIntHandler, NULL);
-    sigaction(SIGINT, &sigIntHandler, NULL);
-#else
-    SetConsoleCtrlHandler(sigIntHandler, TRUE);
 #endif
     
-    while (running and !killLoop)
+    while (running && !killLoop)
     {
-        mwmp_input::handler();
+#ifndef _WIN32
+        sigaction(SIGTERM, &sigIntHandler, NULL);
+        sigaction(SIGINT, &sigIntHandler, NULL);
+#endif
+        if (kbhit() && getch() == '\n')
+            break;
         for (packet=peer->Receive(); packet; peer->DeallocatePacket(packet), packet=peer->Receive())
         {
             if (getMasterClient()->Process(packet))

@@ -42,7 +42,9 @@ namespace mwmp
     {
         SHORT,
         LONG,
-        FLOAT
+        FLOAT,
+        INT,
+        STRING
     };
 
     struct ClientVariable
@@ -54,6 +56,7 @@ namespace mwmp
 
         int intValue;
         float floatValue;
+        std::string stringValue;
     };
 
     struct Time
@@ -80,6 +83,12 @@ namespace mwmp
             return refId == rhs.refId && count == rhs.count && charge == rhs.charge &&
                 enchantmentCharge == rhs.enchantmentCharge && soul == rhs.soul;
         }
+    };
+
+    struct ProjectileOrigin
+    {
+        float origin[3];
+        float orientation[4];
     };
     
     struct Target
@@ -114,6 +123,7 @@ namespace mwmp
         std::string rangedAmmoId;
 
         ESM::Position hitPosition;
+        ProjectileOrigin projectileOrigin;
 
         float damage = 0;
         float attackStrength = 0;
@@ -147,7 +157,8 @@ namespace mwmp
         std::string spellId; // id of spell (e.g. "fireball")
         std::string itemId;
 
-        ESM::Position hitPosition;
+        bool hasProjectile = false;
+        ProjectileOrigin projectileOrigin;
 
         bool isHit;
         bool success;
@@ -157,12 +168,20 @@ namespace mwmp
         bool shouldSend;
     };
 
+    struct SpellCooldown
+    {
+        std::string id;
+        int startTimestampDay;
+        double startTimestampHour;
+    };
+
     struct ActiveSpell
     {
         std::string id;
         bool isStackingSpell;
         int timestampDay;
         double timestampHour;
+        Target caster;
         ESM::ActiveSpells::ActiveSpellParams params;
     };
 

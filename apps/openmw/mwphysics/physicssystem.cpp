@@ -467,7 +467,7 @@ namespace MWPhysics
 
     void PhysicsSystem::addHeightField (const float* heights, int x, int y, float triSize, float sqrtVerts, float minH, float maxH, const osg::Object* holdObject)
     {
-        mHeightFields[std::make_pair(x,y)] = std::make_unique<HeightField>(heights, x, y, triSize, sqrtVerts, minH, maxH, holdObject, mTaskScheduler.get());
+        mHeightFields[std::make_pair(x,y)] = osg::ref_ptr<HeightField>(new HeightField(heights, x, y, triSize, sqrtVerts, minH, maxH, holdObject, mTaskScheduler.get()));
     }
 
     void PhysicsSystem::removeHeightField (int x, int y)
@@ -644,7 +644,7 @@ namespace MWPhysics
 
         mTaskScheduler->convexSweepTest(projectile->getConvexShape(), from_, to_, resultCallback);
 
-        const auto newpos = projectile->isActive() ? position : Misc::Convert::toOsg(resultCallback.m_hitPointWorld);
+        const auto newpos = projectile->isActive() ? position : Misc::Convert::toOsg(projectile->getHitPosition());
         projectile->setPosition(newpos);
         mTaskScheduler->updateSingleAabb(foundProjectile->second);
     }
@@ -654,7 +654,7 @@ namespace MWPhysics
         ObjectMap::iterator found = mObjects.find(ptr);
         if (found != mObjects.end())
         {
-            found->second->setRotation(Misc::Convert::toBullet(ptr.getRefData().getBaseNode()->getAttitude()));
+            found->second->setRotation(ptr.getRefData().getBaseNode()->getAttitude());
             mTaskScheduler->updateSingleAabb(found->second);
             return;
         }
@@ -675,7 +675,7 @@ namespace MWPhysics
         ObjectMap::iterator found = mObjects.find(ptr);
         if (found != mObjects.end())
         {
-            found->second->setOrigin(Misc::Convert::toBullet(ptr.getRefData().getPosition().asVec3()));
+            found->second->updatePosition();
             mTaskScheduler->updateSingleAabb(found->second);
             return;
         }
@@ -705,11 +705,19 @@ namespace MWPhysics
         if (!shape)
             return;
 
-        auto actor = std::make_shared<Actor>(ptr, shape, mTaskScheduler.get());
+        // check if Actor should spawn above water
+        const MWMechanics::MagicEffects& effects = ptr.getClass().getCreatureStats(ptr).getMagicEffects();
+        const bool canWaterWalk = effects.get(ESM::MagicEffect::WaterWalking).getMagnitude() > 0;
+
+        auto actor = std::make_shared<Actor>(ptr, shape, mTaskScheduler.get(), canWaterWalk);
+        
+        // check if Actor is on the ground or in the air
+        traceDown(ptr, ptr.getRefData().getPosition().asVec3(), 10.f);
+
         mActors.emplace(ptr, std::move(actor));
     }
 
-    int PhysicsSystem::addProjectile (const MWWorld::Ptr& caster, const osg::Vec3f& position, const std::string& mesh, bool computeRadius, bool canTraverseWater)
+    int PhysicsSystem::addProjectile (const MWWorld::Ptr& caster, const osg::Vec3f& position, const std::string& mesh, bool computeRadius)
     {
         osg::ref_ptr<Resource::BulletShapeInstance> shapeInstance = mShapeManager->getInstance(mesh);
         assert(shapeInstance);
@@ -717,7 +725,7 @@ namespace MWPhysics
 
         mProjectileId++;
 
-        auto projectile = std::make_shared<Projectile>(caster, position, radius, canTraverseWater, mTaskScheduler.get(), this);
+        auto projectile = std::make_shared<Projectile>(caster, position, radius, mTaskScheduler.get(), this);
         mProjectiles.emplace(mProjectileId, std::move(projectile));
 
         return mProjectileId;

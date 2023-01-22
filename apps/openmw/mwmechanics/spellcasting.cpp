@@ -136,8 +136,7 @@ namespace MWMechanics
                                          // throughout the iteration of this spell's 
                                          // effects, we display a "can't re-cast" message
 
-        // Try absorbing the spell. Some handling must still happen for absorbed effects.
-        bool absorbed = absorbSpell(mId, caster, target);
+        int absorbChance = getAbsorbChance(caster, target);
 
         int currentEffectIndex = 0;
         for (std::vector<ESM::ENAMstruct>::const_iterator effectIt (effects.mList.begin());
@@ -159,6 +158,13 @@ namespace MWMechanics
             }
             canCastAnEffect = true;
 
+            // Try absorbing the effect
+            if(absorbChance && Misc::Rng::roll0to99() < absorbChance)
+            {
+                absorbSpell(mId, caster, target);
+                continue;
+            }
+
             if (!checkEffectTarget(effectIt->mEffectID, target, caster, castByPlayer))
                 continue;
 
@@ -172,13 +178,22 @@ namespace MWMechanics
             if (target.getClass().isActor() && target != caster && !caster.isEmpty() && isHarmful)
                 target.getClass().onHit(target, 0.0f, true, MWWorld::Ptr(), caster, osg::Vec3f(), true);
 
-            // Avoid proceeding further for absorbed spells.
-            if (absorbed)
-                continue;
-
             // Reflect harmful effects
             if (!reflected && reflectEffect(*effectIt, magicEffect, caster, target, reflectedEffects))
                 continue;
+
+            /*
+                Start of tes3mp addition
+
+                Now that reflected effects have been handled, don't unilaterally process effects further for dedicated players
+                and actors on this client and instead expect their effects to be applied correctly through the SpellsActive
+                packets received
+            */
+            if (mwmp::PlayerList::isDedicatedPlayer(target) || mwmp::Main::get().getCellController()->isDedicatedActor(target))
+                continue;
+            /*
+                End of tes3mp addition
+            */
 
             // Try resisting.
             float magnitudeMult = getEffectMultiplier(effectIt->mEffectID, target, caster, spell, &targetEffects);
@@ -239,16 +254,7 @@ namespace MWMechanics
                     if (!appliedOnce)
                         effect.mDuration = std::max(1.f, effect.mDuration);
 
-                    /*
-                        Start of tes3mp change (major)
-
-                        If the target is a DedicatedPlayer or DedicatedActor, don't apply effects to them unilaterally on this
-                        client and wait for the server's response to the other client to apply the effects for us
-                    */
-                    if (effect.mDuration == 0 && !mwmp::PlayerList::isDedicatedPlayer(target) && !mwmp::Main::get().getCellController()->isDedicatedActor(target))
-                    /*
-                        End of tes3mp change (major)
-                    */
+                    if (effect.mDuration == 0)
                     {
                         // We still should add effect to list to allow GetSpellEffects to detect this spell
                         appliedLastingEffects.push_back(effect);
@@ -285,16 +291,7 @@ namespace MWMechanics
                         if (!wasDead && isDead)
                             MWBase::Environment::get().getMechanicsManager()->actorKilled(target, caster);
                     }
-                    /*
-                        Start of tes3mp change (major)
-
-                        If the target is a DedicatedPlayer or DedicatedActor, don't apply effects to them unilaterally on this
-                        client and wait for the server's response to the other client to apply the effects for us
-                    */
-                    else if (!mwmp::PlayerList::isDedicatedPlayer(target) && !mwmp::Main::get().getCellController()->isDedicatedActor(target))
-                    /*
-                        End of tes3mp change (major)
-                    */
+                    else
                     {
                         effect.mTimeLeft = effect.mDuration;
 
@@ -363,6 +360,20 @@ namespace MWMechanics
                         sndMgr->playSound3D(target, magicEffect->mHitSound, 1.0f, 1.0f);
                     else
                         sndMgr->playSound3D(target, schools[magicEffect->mData.mSchool]+" hit", 1.0f, 1.0f);
+
+                    /*
+                        Start of tes3mp addition
+
+                        Send an ID_OBJECT_SOUND packet every time a sound is made here
+                    */
+                    mwmp::ObjectList* objectList = mwmp::Main::get().getNetworking()->getObjectList();
+                    objectList->reset();
+                    objectList->packetOrigin = mwmp::CLIENT_GAMEPLAY;
+                    objectList->addObjectSound(target, magicEffect->mHitSound.empty() ? schools[magicEffect->mData.mSchool] + " hit" : magicEffect->mHitSound, 1.0f, 1.0f);
+                    objectList->sendObjectSound();
+                    /*
+                        End of tes3mp addition
+                    */
 
                     // Add VFX
                     const ESM::Static* castStatic;
@@ -642,6 +653,20 @@ namespace MWMechanics
                     };
                     MWBase::SoundManager *sndMgr = MWBase::Environment::get().getSoundManager();
                     sndMgr->playSound3D(mCaster, "Spell Failure " + schools[school], 1.0f, 1.0f);
+
+                    /*
+                        Start of tes3mp addition
+
+                        Send an ID_OBJECT_SOUND packet every time a sound is made here
+                    */
+                    mwmp::ObjectList* objectList = mwmp::Main::get().getNetworking()->getObjectList();
+                    objectList->reset();
+                    objectList->packetOrigin = mwmp::CLIENT_GAMEPLAY;
+                    objectList->addObjectSound(mCaster, "Spell Failure " + schools[school], 1.0f, 1.0f);
+                    objectList->sendObjectSound();
+                    /*
+                        End of tes3mp addition
+                    */
                 }
                 return false;
             }
@@ -761,6 +786,21 @@ namespace MWMechanics
 
                     MWBase::SoundManager *sndMgr = MWBase::Environment::get().getSoundManager();
                     sndMgr->playSound3D(mCaster, "Spell Failure " + schools[school], 1.0f, 1.0f);
+
+                    /*
+                        Start of tes3mp addition
+
+                        Send an ID_OBJECT_SOUND packet every time a sound is made here
+                    */
+                    mwmp::ObjectList* objectList = mwmp::Main::get().getNetworking()->getObjectList();
+                    objectList->reset();
+                    objectList->packetOrigin = mwmp::CLIENT_GAMEPLAY;
+                    objectList->addObjectSound(mCaster, "Spell Failure " + schools[school], 1.0f, 1.0f);
+                    objectList->sendObjectSound();
+                    /*
+                        End of tes3mp addition
+                    */
+
                     return false;
                 }
             }

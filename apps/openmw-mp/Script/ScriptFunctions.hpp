@@ -174,6 +174,7 @@ public:
             {"OnPlayerShapeshift",       Callback<unsigned short>()},
             {"OnPlayerSpellbook",        Callback<unsigned short>()},
             {"OnPlayerSpellsActive",     Callback<unsigned short>()},
+            {"OnPlayerCooldowns",        Callback<unsigned short>()},
             {"OnPlayerQuickKeys",        Callback<unsigned short>()},
             {"OnPlayerTopic",            Callback<unsigned short>()},
             {"OnPlayerDisposition",      Callback<unsigned short>()},
@@ -219,8 +220,7 @@ public:
             {"OnClientScriptLocal",      Callback<unsigned short, const char*>()},
             {"OnClientScriptGlobal",     Callback<unsigned short>()},
             {"OnMpNumIncrement",         Callback<int>()},
-            {"OnRequestDataFileList",    Callback<>()},
-            {"OnServerWindowInput",      Callback<const char *>()}
+            {"OnRequestDataFileList",    Callback<>()}
     };
 };
 

@@ -47,6 +47,16 @@
 #include "../mwphysics/physicssystem.hpp"
 #include "../mwphysics/projectile.hpp"
 
+/*
+    Start of tes3mp addition
+
+    Include additional headers for multiplayer purposes
+*/
+#include "../mwmp/MechanicsHelper.hpp"
+/*
+    End of tes3mp addition
+*/
+
 namespace
 {
     ESM::EffectList getMagicBoltData(std::vector<std::string>& projectileIDs, std::set<std::string>& sounds, float& speed, std::string& texture, std::string& sourceName, const std::string& id)
@@ -278,6 +288,42 @@ namespace MWWorld
         else
             orient.makeRotate(osg::Vec3f(0,1,0), osg::Vec3f(fallbackDirection));
 
+        /*
+            Start of tes3mp addition
+
+            If the actor casting this is a LocalPlayer or LocalActor, track their projectile origin so it can be sent
+            in the next PlayerCast or ActorCast packet
+
+            Otherwise, set the projectileOrigin for a DedicatedPlayer or DedicatedActor
+        */
+        mwmp::Cast* localCast = MechanicsHelper::getLocalCast(caster);
+
+        if (localCast)
+        {
+            localCast->hasProjectile = true;
+            localCast->projectileOrigin.origin[0] = pos.x();
+            localCast->projectileOrigin.origin[1] = pos.y();
+            localCast->projectileOrigin.origin[2] = pos.z();
+            localCast->projectileOrigin.orientation[0] = orient.x();
+            localCast->projectileOrigin.orientation[1] = orient.y();
+            localCast->projectileOrigin.orientation[2] = orient.z();
+            localCast->projectileOrigin.orientation[3] = orient.w();
+        }
+        else
+        {
+            mwmp::Cast* dedicatedCast = MechanicsHelper::getDedicatedCast(caster);
+
+            if (dedicatedCast)
+            {
+                pos = osg::Vec3f(dedicatedCast->projectileOrigin.origin[0], dedicatedCast->projectileOrigin.origin[1], dedicatedCast->projectileOrigin.origin[2]);
+                orient = osg::Quat(dedicatedCast->projectileOrigin.orientation[0], dedicatedCast->projectileOrigin.orientation[1], dedicatedCast->projectileOrigin.orientation[2],
+                    dedicatedCast->projectileOrigin.orientation[3]);
+            }
+        }
+        /*
+            End of tes3mp addition
+        */
+
         MagicBoltState state;
         state.mSpellId = spellId;
         state.mCasterHandle = caster;
@@ -320,7 +366,7 @@ namespace MWWorld
         // in case there are multiple effects, the model is a dummy without geometry. Use the second effect for physics shape
         if (state.mIdMagic.size() > 1)
             model = "meshes\\" + MWBase::Environment::get().getWorld()->getStore().get<ESM::Weapon>().find(state.mIdMagic.at(1))->mModel;
-        state.mProjectileId = mPhysics->addProjectile(caster, pos, model, true, false);
+        state.mProjectileId = mPhysics->addProjectile(caster, pos, model, true);
         state.mToDelete = false;
         mMagicBolts.push_back(state);
     }
@@ -345,7 +391,7 @@ namespace MWWorld
         if (!ptr.getClass().getEnchantment(ptr).empty())
             SceneUtil::addEnchantedGlow(state.mNode, mResourceSystem, ptr.getClass().getEnchantmentColor(ptr));
 
-        state.mProjectileId = mPhysics->addProjectile(actor, pos, model, false, true);
+        state.mProjectileId = mPhysics->addProjectile(actor, pos, model, false);
         state.mToDelete = false;
         mProjectiles.push_back(state);
     }
@@ -496,9 +542,6 @@ namespace MWWorld
 
             auto* projectile = mPhysics->getProjectile(projectileState.mProjectileId);
 
-            if (const auto hitWaterPos = projectile->getWaterHitPosition())
-                mRendering->emitWaterRipple(Misc::Convert::toOsg(*hitWaterPos));
-
             const auto pos = projectile->getPosition();
             projectileState.mNode->setPosition(pos);
 
@@ -522,6 +565,8 @@ namespace MWWorld
                 if (invIt != inv.end() && Misc::StringUtils::ciEqual(invIt->getCellRef().getRefId(), projectileState.mBowId))
                     bow = *invIt;
             }
+            if (projectile->getHitWater())
+                mRendering->emitWaterRipple(pos);
 
             MWMechanics::projectileHit(caster, target, bow, projectileRef.getPtr(), pos, projectileState.mAttackStrength);
             cleanupProjectile(projectileState);
@@ -654,7 +699,7 @@ namespace MWWorld
                 int weaponType = ptr.get<ESM::Weapon>()->mBase->mData.mType;
                 state.mThrown = MWMechanics::getWeaponType(weaponType)->mWeaponClass == ESM::WeaponType::Thrown;
 
-                state.mProjectileId = mPhysics->addProjectile(state.getCaster(), osg::Vec3f(esm.mPosition), model, false, true);
+                state.mProjectileId = mPhysics->addProjectile(state.getCaster(), osg::Vec3f(esm.mPosition), model, false);
             }
             catch(...)
             {
@@ -707,7 +752,7 @@ namespace MWWorld
 
             osg::Vec4 lightDiffuseColor = getMagicBoltLightDiffuseColor(state.mEffects);
             createModel(state, model, osg::Vec3f(esm.mPosition), osg::Quat(esm.mOrientation), true, true, lightDiffuseColor, texture);
-            state.mProjectileId = mPhysics->addProjectile(state.getCaster(), osg::Vec3f(esm.mPosition), model, true, false);
+            state.mProjectileId = mPhysics->addProjectile(state.getCaster(), osg::Vec3f(esm.mPosition), model, true);
 
             MWBase::SoundManager *sndMgr = MWBase::Environment::get().getSoundManager();
             for (const std::string &soundid : state.mSoundIds)

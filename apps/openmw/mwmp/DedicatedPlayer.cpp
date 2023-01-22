@@ -64,6 +64,9 @@ DedicatedPlayer::DedicatedPlayer(RakNet::RakNetGUID guid) : BasePlayer(guid)
 
     hasReceivedInitialEquipment = false;
     hasFinishedInitialTeleportation = false;
+
+    isJumping = false;
+    wasJumping = false;
 }
 
 DedicatedPlayer::~DedicatedPlayer()
@@ -117,7 +120,7 @@ void DedicatedPlayer::move(float dt)
 
     ESM::Position refPos = ptr.getRefData().getPosition();
     MWBase::World *world = MWBase::Environment::get().getWorld();
-    const int maxInterpolationDistance = 40;
+    const int maxInterpolationDistance = 80;
 
     // Apply interpolation only if the position hasn't changed too much from last time
     bool shouldInterpolate =
@@ -207,6 +210,17 @@ void DedicatedPlayer::setAnimFlags()
         levitationCast.mAlwaysSucceed = true;
         levitationCast.cast("Levitate");
         isLevitationPurged = false;
+    }
+
+    if (isJumping && !wasJumping)
+    {
+        world->setOnGround(ptr, false);
+        wasJumping = true;
+    }
+    else if (wasJumping && !isJumping)
+    {
+        world->setOnGround(ptr, true);
+        wasJumping = false;
     }
 
     MWMechanics::CreatureStats *ptrCreatureStats = &ptr.getClass().getCreatureStats(ptr);
@@ -381,7 +395,7 @@ void DedicatedPlayer::setCell()
     MWBase::World *world = MWBase::Environment::get().getWorld();
 
     LOG_MESSAGE_SIMPLE(TimedLog::LOG_INFO, "Server says DedicatedPlayer %s moved to %s",
-        npc.mName.c_str(), cell.getDescription().c_str());
+        npc.mName.c_str(), cell.getShortDescription().c_str());
 
     MWWorld::CellStore *cellStore = Main::get().getCellController()->getCellStore(cell);
 
@@ -491,9 +505,12 @@ void DedicatedPlayer::addSpellsActive()
     for (const auto& activeSpell : spellsActiveChanges.activeSpells)
     {
         MWWorld::TimeStamp timestamp = MWWorld::TimeStamp(activeSpell.timestampHour, activeSpell.timestampDay);
+        int casterActorId = MechanicsHelper::getActorId(activeSpell.caster);
+
+        MechanicsHelper::createSpellGfx(getPtr(), activeSpell.params.mEffects);
 
         // Don't do a check for a spell's existence, because active effects from potions need to be applied here too
-        activeSpells.addSpell(activeSpell.id, activeSpell.isStackingSpell, activeSpell.params.mEffects, activeSpell.params.mDisplayName, 1, timestamp);
+        activeSpells.addSpell(activeSpell.id, activeSpell.isStackingSpell, activeSpell.params.mEffects, activeSpell.params.mDisplayName, casterActorId, timestamp, false);
     }
 }
 

@@ -368,6 +368,18 @@ void RecordHelper::overrideRecord(const mwmp::CellRecord& record)
         world->unloadCell(finalData);
         world->clearCellStore(finalData);
         world->getModifiableStore().overrideRecord(finalData);
+
+        // Create a Pathgrid record for this new Cell based on the base Cell's Pathgrid
+        // Note: This has to be done after the new Cell has been created so the Pathgrid override
+        //       can correctly determine whether the Cell is an interior or an exterior
+        const ESM::Pathgrid* basePathgrid = world->getStore().get<ESM::Pathgrid>().search(record.baseId);
+
+        if (basePathgrid)
+        {
+            ESM::Pathgrid finalPathgrid = *basePathgrid;
+            finalPathgrid.mCell = recordData.mName;
+            world->getModifiableStore().overrideRecord(finalPathgrid);
+        }
     }
     else
     {
@@ -712,6 +724,37 @@ void RecordHelper::overrideRecord(const mwmp::EnchantmentRecord& record)
 
         if (record.baseOverrides.hasEffects)
             finalData.mEffects.mList = recordData.mEffects.mList;
+
+        world->getModifiableStore().overrideRecord(finalData);
+    }
+    else
+    {
+        LOG_APPEND(TimedLog::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
+        return;
+    }
+}
+
+void RecordHelper::overrideRecord(const mwmp::GameSettingRecord& record)
+{
+    const ESM::GameSetting& recordData = record.data;
+
+    if (recordData.mId.empty())
+    {
+        LOG_APPEND(TimedLog::LOG_INFO, "-- Ignoring record override with no id provided");
+        return;
+    }
+
+    MWBase::World* world = MWBase::Environment::get().getWorld();
+
+    if (record.baseId.empty())
+    {
+        world->getModifiableStore().overrideRecord(recordData);
+    }
+    else if (doesRecordIdExist<ESM::GameSetting>(record.baseId))
+    {
+        const ESM::GameSetting* baseData = world->getStore().get<ESM::GameSetting>().search(record.baseId);
+        ESM::GameSetting finalData = *baseData;
+        finalData.mId = recordData.mId;
 
         world->getModifiableStore().overrideRecord(finalData);
     }

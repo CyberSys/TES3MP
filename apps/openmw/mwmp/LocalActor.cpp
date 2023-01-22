@@ -74,9 +74,9 @@ void LocalActor::update(bool forceUpdate)
 void LocalActor::updateCell()
 {
     LOG_MESSAGE_SIMPLE(TimedLog::LOG_VERBOSE, "Sending ID_ACTOR_CELL_CHANGE about %s %i-%i in cell %s to server",
-                       refId.c_str(), refNum, mpNum, cell.getDescription().c_str());
+                       refId.c_str(), refNum, mpNum, cell.getShortDescription().c_str());
 
-    LOG_APPEND(TimedLog::LOG_VERBOSE, "- Moved to cell %s", ptr.getCell()->getCell()->getDescription().c_str());
+    LOG_APPEND(TimedLog::LOG_VERBOSE, "- Moved to cell %s", ptr.getCell()->getCell()->getShortDescription().c_str());
 
     cell = *ptr.getCell()->getCell();
     position = ptr.getRefData().getPosition();
@@ -98,7 +98,8 @@ void LocalActor::updatePosition(bool forceUpdate)
     else
     {
         posIsChanging = direction.pos[0] != 0 || direction.pos[1] != 0 || direction.pos[2] != 0 ||
-            direction.rot[0] != 0 || direction.rot[1] != 0 || direction.rot[2] != 0;
+            direction.rot[0] != 0 || direction.rot[1] != 0 || direction.rot[2] != 0 ||
+            !MWBase::Environment::get().getWorld()->isOnGround(ptr);
     }
 
     if (forceUpdate || posIsChanging || posWasChanged)
@@ -273,6 +274,7 @@ void LocalActor::updateAttackOrCast()
     {
         mwmp::Main::get().getNetworking()->getActorList()->addCastActor(*this);
         cast.shouldSend = false;
+        cast.hasProjectile = false;
     }
 }
 
@@ -285,7 +287,7 @@ void LocalActor::sendEquipment()
     Main::get().getNetworking()->getActorPacket(ID_ACTOR_EQUIPMENT)->Send();
 }
 
-void LocalActor::sendSpellsActiveAddition(const std::string id, bool isStackingSpell, ESM::ActiveSpells::ActiveSpellParams params, MWWorld::TimeStamp timestamp)
+void LocalActor::sendSpellsActiveAddition(const std::string id, bool isStackingSpell, const MWMechanics::ActiveSpells::ActiveSpellParams& params)
 {
     // Skip any bugged spells that somehow have clientside-only dynamic IDs
     if (id.find("$dynamic") != std::string::npos)
@@ -293,12 +295,16 @@ void LocalActor::sendSpellsActiveAddition(const std::string id, bool isStackingS
 
     spellsActiveChanges.activeSpells.clear();
 
+    const MWWorld::Ptr& caster = MWBase::Environment::get().getWorld()->searchPtrViaActorId(params.mCasterActorId);
+
     mwmp::ActiveSpell spell;
     spell.id = id;
     spell.isStackingSpell = isStackingSpell;
-    spell.timestampDay = timestamp.getDay();
-    spell.timestampHour = timestamp.getHour();
-    spell.params = params;
+    spell.caster = MechanicsHelper::getTarget(caster);
+    spell.timestampDay = params.mTimeStamp.getDay();
+    spell.timestampHour = params.mTimeStamp.getHour();
+    spell.params.mEffects = params.mEffects;
+    spell.params.mDisplayName = params.mDisplayName;
     spellsActiveChanges.activeSpells.push_back(spell);
 
     spellsActiveChanges.action = mwmp::SpellsActiveChanges::ADD;
@@ -342,7 +348,7 @@ void LocalActor::sendDeath(char newDeathState)
         killer = MechanicsHelper::getTarget(ptr);
 
     LOG_MESSAGE_SIMPLE(TimedLog::LOG_INFO, "Sending ID_ACTOR_DEATH about %s %i-%i in cell %s to server\n- deathState: %d",
-        refId.c_str(), refNum, mpNum, cell.getDescription().c_str(), deathState);
+        refId.c_str(), refNum, mpNum, cell.getShortDescription().c_str(), deathState);
 
     ActorList actorList;
     actorList.cell = cell;
